@@ -195,6 +195,7 @@ tfoot td{position:sticky;bottom:0;background:#F0F3F7;font-weight:700;padding:8px
 .detalle-fijo{margin-top:12px;padding-top:12px;border-top:1px dashed var(--linea);}
 
 /* Llamada a la siguiente etapa */
+.siguiente.bloqueado{background:#FBE6E9;border-color:#E8C4CB;}
 .siguiente{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
   background:#EEF3F9;border:1px solid var(--azul-linea);border-radius:10px;padding:16px 20px;margin-bottom:14px;font-size:13.5px;}
 .paso.clicable{cursor:pointer;border-radius:8px;transition:background .12s ease;}
@@ -652,6 +653,8 @@ function calcularCaso(c){
 
   /* En convenio y sectorial el financiamiento no proviene del solicitante:
      el saldo SIGFE no se imputa y el caso se carga íntegro a su fuente. */
+  /* En las fuentes con aporte del solicitante —incluido MIXTO— se ocupa primero
+     el saldo SIGFE y la diferencia se carga al subtítulo 22 o Fondo 41. */
   var tercero = c.sinAporteTercero ? 0 : (saldo === 0 ? 0 : (saldo > valorizacion ? valorizacion : saldo));
   var convenio = esConvenio ? valorizacion : 0;
   var f41;
@@ -738,6 +741,9 @@ function memoriaCalculo(c){
   t += "Financiamiento: terceros " + fmtCLP(c.tercero) + ", 22/Fondo 41 " + fmtCLP(c.f41) + ", convenio " + fmtCLP(c.convenio) + ".";
   if(c.saldoPanel !== undefined && c.saldoPanel !== c.saldoSigfe)
     t += " Saldo SIGFE tomado de la lista: " + fmtCLP(c.saldoSigfe) + "; el panel registraba " + fmtCLP(c.saldoPanel) + " (referencial).";
+  if(normalizar(c.fuente).indexOf("MIXTO") > -1 && c.tercero && c.f41)
+    t += " Financiamiento mixto: se imputó primero el saldo SIGFE (" + fmtCLP(c.tercero) +
+      ") y la diferencia (" + fmtCLP(c.f41) + ") al subtítulo 22 / Fondo 41.";
   if(c.ingresoManual)
     t += " Caso ingresado manualmente en la herramienta: sus datos no provienen del panel de casos en proceso.";
   if(c.fuentePanel && c.fuente && c.fuentePanel !== c.fuente)
@@ -1559,8 +1565,24 @@ function olvidarLocal(){
    7. ARMADO DE LA INTERFAZ
    ------------------------------------------------------------------ */
 /* Salta a una sección desde cualquier parte de la herramienta. */
+/* Mientras haya folios de la lista sin resolver no se avanza al cálculo:
+   licitar con folios fuera del cálculo deja montos incompletos. */
+function hayFoliosSinResolver(){ return estado.foliosSinPanel.length > 0; }
+function seccionBloqueada(id){
+  return hayFoliosSinResolver() && SIN_DATOS_OK.indexOf(id) === -1;
+}
+
 function irA(id){
   if(!PANELES[id]) return;
+  if(seccionBloqueada(id)){
+    seccionActual = "datos";
+    estado.mensajesCarga = ["Hay " + fmt(estado.foliosSinPanel.length) +
+      (estado.foliosSinPanel.length === 1 ? " folio de la lista que no está en el panel." : " folios de la lista que no están en el panel.") +
+      " Complete sus datos, reinténtelos contra el panel o descártelos antes de avanzar al cálculo."];
+    if(window.scrollTo) window.scrollTo(0, 0);
+    render();
+    return;
+  }
   seccionActual = id;
   if(window.scrollTo) window.scrollTo(0, 0);
   render();
@@ -1575,10 +1597,9 @@ function construirNav(){
   nav.innerHTML = html;
   Array.prototype.forEach.call(nav.querySelectorAll(".nav-item"), function(b){
     b.addEventListener("click", function(){
-      seccionActual = b.getAttribute("data-id");
       document.getElementById("sidebar").classList.remove("open");
       document.getElementById("overlay").classList.remove("show");
-      render();
+      irA(b.getAttribute("data-id"));
     });
   });
 }
@@ -1724,7 +1745,7 @@ function tarjetaFoliosPendientes(){
         : '<span class="tag-pill warn">falta la fecha</span>') + "</td>";
   });
 
-  return '<div class="card" style="border-left:4px solid var(--rojo)"><h3>Folios sin coincidencia en el panel</h3>' +
+  return '<div class="card" id="tarjetaPendientes" style="border-left:4px solid var(--rojo)"><h3>Folios sin coincidencia en el panel</h3>' +
     '<div class="card-sub">' + fmt(p.length) + (p.length === 1 ? " folio de la lista no existe en el panel cargado y quedó fuera del cálculo." : " folios de la lista no existen en el panel cargado y quedaron fuera del cálculo.") + "</div>" +
     '<div class="note-card alerta"><b>Dos caminos.</b> Si el expediente ingresó después de la última carga mensual, actualice el panel y pulse <b>reintentar</b>. ' +
       "Si necesita licitarlo ahora, complete aquí mismo los datos que aportaba el panel y pulse <b>incorporar</b>: basta la fecha de ingreso, que es la que fija la UF. " +
@@ -1835,7 +1856,7 @@ PANELES.datos = function(c){
 
     '<div class="card"><h3>2. Casos a licitar</h3>' +
       '<div class="card-sub">Este es el archivo que se procesa: todo lo que muestran las secciones de resultados, el detalle y la exportación sale de aquí. Cuatro columnas: ' +
-        '<b>folio</b> o N° de expediente · <b>saldo SIGFE</b>, el valor real que rige el cálculo · <b>fuente de financiamiento</b> · <b>convenio</b>, el nombre del convenio al que pertenece el expediente, que permite separar los montos por convenio en los resultados y en el Excel. ' +
+        '<b>folio</b> o N° de expediente · <b>saldo SIGFE</b>, el valor real que rige el cálculo · <b>fuente de financiamiento</b>, que admite 100% pagado por el solicitante, <b>mixto</b> —parte pagada con el saldo SIGFE y el resto con cargo al subtítulo 22 o Fondo 41—, sectorial y convenio · <b>convenio</b>, el nombre del convenio al que pertenece el expediente, que permite separar los montos por convenio en los resultados y en el Excel. ' +
         'La columna de convenio se llena solo en los casos cuya fuente es convenio; en los demás se deja vacía. El resto de los datos se completa desde el panel.</div>' +
       '<div class="fila">' +
         '<div class="campo"><label>Lista de casos a licitar (.xlsx o .xls)</label><input type="file" id="inputSeleccion" accept=".xlsx,.xls"' + (estado.padron.length ? "" : " disabled") + "></div>" +
@@ -1873,9 +1894,15 @@ PANELES.datos = function(c){
     "</div>" +
 
     (estado.casos.length
-      ? '<div class="siguiente"><div><b>' + fmt(estado.casos.length) + " casos listos para calcular.</b> " +
-        "Los montos por fuente, las alertas y el detalle ya están disponibles.</div>" +
-        '<button class="btn-download" id="btnVerResultados">Revisar y calcular →</button></div>'
+      ? (hayFoliosSinResolver()
+        ? '<div class="siguiente bloqueado"><div><b>No se puede avanzar al cálculo.</b> Quedan ' +
+          fmt(estado.foliosSinPanel.length) + (estado.foliosSinPanel.length === 1 ? " folio de la lista sin resolver" : " folios de la lista sin resolver") +
+          ": complételos con su fecha de ingreso e incorpórelos, reinténtelos contra un panel actualizado, o descártelos si no corresponden. " +
+          "Mientras tanto sus montos quedarían fuera de la licitación.</div>" +
+          '<button class="btn-download" id="btnIrPendientes">Ver los folios pendientes</button></div>'
+        : '<div class="siguiente"><div><b>' + fmt(estado.casos.length) + " casos listos para calcular.</b> " +
+          "Los montos por fuente, las alertas y el detalle ya están disponibles.</div>" +
+          '<button class="btn-download" id="btnVerResultados">Revisar y calcular →</button></div>')
       : "") +
 
     cartucho("A — Carga de archivos");
@@ -1965,6 +1992,11 @@ PANELES.datos = function(c){
     guardarLocal(); render();
   });
   conectarControlesUF();
+  var btnIrPend = document.getElementById("btnIrPendientes");
+  if(btnIrPend) btnIrPend.addEventListener("click", function(){
+    var tarjeta = c.querySelector("#tarjetaPendientes");
+    if(tarjeta && tarjeta.scrollIntoView) tarjeta.scrollIntoView({behavior:"smooth", block:"start"});
+  });
   var btnVer = document.getElementById("btnVerResultados");
   if(btnVer) btnVer.addEventListener("click", function(){ irA("alertas"); });
   document.getElementById("btnGuardarSesion").addEventListener("click", guardarSesionArchivo);
@@ -2636,8 +2668,15 @@ function conectarEdicionCasos(contenedor){
 }
 
 /* Opciones de fuente de financiamiento: las del archivo más las ya presentes. */
+/* Fuentes siempre disponibles, aunque el archivo no las traiga. */
+var FUENTES_BASE = ["100% PAGADO POR EL SOLICITANTE", "MIXTO", "SECTORIAL", "CONVENIO"];
+
 function opcionesFuente(actual){
   var lista = (estado.fuentesValidas || []).slice();
+  FUENTES_BASE.forEach(function(f){
+    var existe = lista.some(function(x){ return normalizar(x) === normalizar(f); });
+    if(!existe) lista.push(f);
+  });
   estado.casos.forEach(function(x){ if(x.fuente && lista.indexOf(x.fuente) === -1) lista.push(x.fuente); });
   if(actual && lista.indexOf(actual) === -1) lista.push(actual);
   lista.sort();
@@ -2660,6 +2699,8 @@ var TIPOS_ALERTA = [
    detalle:"El caso se está imputando íntegramente al subtítulo 22 o al Fondo del artículo 41. Solicite el saldo al analista de Programación y Control antes de cerrar el cálculo."},
   {id:"acceso_no_registrado", aceptable:true, nivel:"media", titulo:"Factor de acceso no aplicado",
    detalle:"La comuna del expediente figura con factor de acceso en el resuelvo 5° de la Res. Ex. N° 700, pero no trae monto por ese concepto. Revise si corresponde aplicarlo: son 0,3 del costo inicial de pago. Edítelo en la columna Factor acceso de la tabla de abajo o cambie el modo de factores en la sección G."},
+  {id:"mixto_cubierto", aceptable:true, nivel:"media", titulo:"Mixto con saldo suficiente",
+   detalle:"El expediente está declarado como financiamiento mixto, pero el saldo SIGFE cubre toda la valorización, de modo que no queda diferencia con cargo fiscal. Revise si corresponde clasificarlo como pagado por el solicitante."},
   {id:"convenio_sin_nombre", aceptable:true, nivel:"media", titulo:"Convenio sin identificar",
    detalle:"El expediente se financia por convenio pero la lista no indica a cuál pertenece, de modo que su monto no puede separarse por convenio. Agregue la columna con el nombre del convenio o complételo en el detalle."},
   {id:"sin_fuente", aceptable:false, nivel:"alta", titulo:"Sin fuente de financiamiento",
@@ -2686,6 +2727,7 @@ function alertasCaso(c){
   }
   if(!c.fuente) a.push("sin_fuente");
   if(normalizar(c.fuente).indexOf("CONVENIO") > -1 && !String(c.convenioNombre || "").trim()) a.push("convenio_sin_nombre");
+  if(normalizar(c.fuente).indexOf("MIXTO") > -1 && c.valorizacion > 0 && c.saldoSigfe >= c.valorizacion) a.push("mixto_cubierto");
   if(!c.acceso && c.comuna && accesoDeComuna(c.comuna) === true) a.push("acceso_no_registrado");
   if(c.sinUF) a.push("sin_uf");
   var regCom = regionDeComuna(c.comuna);
@@ -3643,7 +3685,8 @@ function exportarExcel(){
   var columnasConvenio = convenios.length ? convenios.map(function(v){ return v.nombre; }) : ["CONVENIO"];
 
   var encabezadoDetalle = [null, E("N°"), E("FOLIO"), E("SOLICITANTE"), E("RUT"), E("COMUNA"),
-    E("FUENTE FINANCIAMIENTO"), E("APORTE TERCERO"), E("APORTE 22/ FONDO 41")];
+    E("FUENTE FINANCIAMIENTO"), E("FACTOR SUPERFICIE"), E("FACTOR ACCESO"), E("ETAPA TÉCNICA"),
+    E("VALORIZACIÓN"), E("APORTE TERCERO"), E("APORTE 22/ FONDO 41")];
   columnasConvenio.forEach(function(n){ encabezadoDetalle.push(E(n === "CONVENIO" ? "CONVENIO" : "CONVENIO · " + n)); });
   encabezadoDetalle.push(E("ALERTAS"), E("MEMORIA DE CÁLCULO"));
   var detalle = [[], encabezadoDetalle];
@@ -3653,7 +3696,8 @@ function exportarExcel(){
   }
   lista.forEach(function(c, i){
     var fila = [null, N(i+1), C(c.folio), T(c.solicitante), C(c.rut), T(c.comuna),
-      T(c.fuente), M(c.tercero), M(c.f41)];
+      T(c.fuente), M(c.superficie), M(c.acceso), M(c.etapa), M(c.valorizacion),
+      M(c.tercero), M(c.f41)];
     columnasConvenio.forEach(function(n){
       var monto = 0;
       if(c.convenio) monto = (convenios.length ? (convenioDelCaso(c) === normalizar(n) ? c.convenio : 0) : c.convenio);
@@ -3666,7 +3710,8 @@ function exportarExcel(){
     detalle.push(fila);
   });
 
-  var filaTotal = [null, null, null, null, null, null, TL("TOTAL"), TM(t.tercero), TM(t.f41)];
+  var filaTotal = [null, null, null, null, null, null, TL("TOTAL"),
+    TM(t.superficie), TM(t.acceso), TM(t.etapa), TM(t.valorizacion), TM(t.tercero), TM(t.f41)];
   columnasConvenio.forEach(function(n){
     var suma = 0;
     lista.forEach(function(c){
@@ -3679,10 +3724,11 @@ function exportarExcel(){
   detalle.push(filaTotal);
 
   var anchosDetalle = [{col:2,ancho:6},{col:3,ancho:11.3},{col:4,ancho:50.7},{col:5,ancho:13},{col:6,ancho:16},
-                       {col:7,ancho:32},{col:8,ancho:16},{col:9,ancho:18}];
-  columnasConvenio.forEach(function(n,i){ anchosDetalle.push({col:10+i, ancho: Math.min(34, Math.max(16, n.length + 6))}); });
-  anchosDetalle.push({col:10+columnasConvenio.length, ancho:38});
-  anchosDetalle.push({col:11+columnasConvenio.length, ancho:95});
+                       {col:7,ancho:32},{col:8,ancho:17},{col:9,ancho:15},{col:10,ancho:15},
+                       {col:11,ancho:16},{col:12,ancho:16},{col:13,ancho:18}];
+  columnasConvenio.forEach(function(n,i){ anchosDetalle.push({col:14+i, ancho: Math.min(34, Math.max(16, n.length + 6))}); });
+  anchosDetalle.push({col:14+columnasConvenio.length, ancho:38});
+  anchosDetalle.push({col:15+columnasConvenio.length, ancho:95});
 
   var hojaDetalle = {
     nombre: "DETALLE",
@@ -3928,8 +3974,10 @@ function render(){
     var id = b.getAttribute("data-id");
     b.classList.toggle("active", id === seccionActual);
     var requiereDatos = SIN_DATOS_OK.indexOf(id) === -1;
-    b.classList.toggle("no-disponible", requiereDatos && !hayDatos);
-    b.title = (requiereDatos && !hayDatos) ? "Disponible al cargar los datos del panel" : "";
+    var bloqueada = requiereDatos && (!hayDatos || hayFoliosSinResolver());
+    b.classList.toggle("no-disponible", bloqueada);
+    b.title = !hayDatos && requiereDatos ? "Disponible al cargar los casos a licitar"
+      : (bloqueada ? "Resuelva los folios sin coincidencia en la sección A" : "");
     var badge = b.querySelector(".nav-badge");
     if(id === "alertas" && conAlerta){
       if(!badge){ badge = document.createElement("span"); badge.className = "nav-badge"; b.appendChild(badge); }
