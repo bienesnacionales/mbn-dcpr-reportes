@@ -1552,16 +1552,22 @@ function RE_render(c,d){
   const dot = RE_dotForRegion(region);
   const dotTotal = dot.sectorial+dot.convenios;
   const perfilLabel = {encargado:'Encargados/as de Unidad', coordinador:'Coordinador/a de programa', abogado:'Abogados/as', tecnico:'Técnicos/as', administrativo:'Administrativos/as'};
+  const dotAbogadosDualAdj = region==='todas'
+    ? Object.values(RE_AJUSTE_ABOGADOS_DUAL).reduce((a,b)=>a+b,0)
+    : (RE_AJUSTE_ABOGADOS_DUAL[region]||0);
   const funcRows = Object.entries(perfilLabel).map(([key,label])=>{
     const p = dot.perfiles[key];
     const total = p.sectorial+p.convenios;
     if(total===0) return '';
+    const totalShown = key==='abogado' ? total + dotAbogadosDualAdj : total;
     const pctSect = total>0 ? Math.round((p.sectorial/total)*100) : 0;
     const pctConv = 100-pctSect;
+    const notaDual = (key==='abogado' && dotAbogadosDualAdj>0) ? `<div style="font-size:10px;color:var(--texto-sec);font-style:italic;margin-top:3px;">Incluye ${dotAbogadosDualAdj} Encargado(a/os) de Unidad que también ejercen función de abogado/a (no se duplican en el total de dotación).</div>` : '';
     return `<div class="re-func-row">
-      <div class="re-flabel"><span>${label}</span><b>${fmt(total)}</b></div>
+      <div class="re-flabel"><span>${label}</span><b>${fmt(totalShown)}</b></div>
       <div class="re-bar-mini"><i style="width:${pctSect}%;background:var(--azul-linea);"></i><i style="width:${pctConv}%;background:var(--rojo);"></i></div>
       <div style="font-size:10px;color:var(--texto-sec);margin-top:2px;">${fmt(p.sectorial)} sectorial, ${fmt(p.convenios)} convenios</div>
+      ${notaDual}
     </div>`;
   }).join('');
 
@@ -1756,8 +1762,12 @@ function RE_renderDotacionRegional(c,d){
         const title = `${RE_PERFIL_INFO[p.perfil].label} · ${RE_CALIDAD_INFO[p.calidad].label} · ${RE_FINANC_INFO[p.financ].label} · ${p.region}`;
         return `<span class="re-pictogram-icon" title="${title}">${RE_personIcon(col,20)}</span>`;
       }).join('');
+      const dualNote = (perfKey==='abogado' && abogadosDualAdj>0)
+        ? ` <span style="font-weight:500;color:var(--texto-sec);">(+${abogadosDualAdj} Encargado(a/os) que también ejercen de abogado/a, mostrados como Encargado/a arriba)</span>`
+        : '';
+      const countShown = perfKey==='abogado' ? personas.length + abogadosDualAdj : personas.length;
       html += `<div class="re-pictogram-row">
-        <div class="re-pictogram-row-label">${RE_PERFIL_INFO[perfKey].label}<br><span style="font-weight:500;color:var(--texto-sec);">${personas.length} personas</span></div>
+        <div class="re-pictogram-row-label">${RE_PERFIL_INFO[perfKey].label}<br><span style="font-weight:500;color:var(--texto-sec);">${countShown} personas</span>${dualNote}</div>
         <div class="re-pictogram-icons">${icons}</div>
       </div>`;
     });
