@@ -304,16 +304,23 @@ table.re-antig td.re-num{text-align:right;font-variant-numeric:tabular-nums;}
    (ej. DATA["Julio 2026"] = {...}) con la misma estructura y
    agregarla a MESES. El resto del panel se actualiza solo.
    =================================================================== */
+const OFICIOS_DETALLE = {"372": [["Arica y Parinacota", 20, 24, 0, 0, 17, 17, 1, 0], ["Tarapacá", 1, 6, 3, 1, 26, 22, 23, 23], ["Antofagasta", 0, 0, 5, 5, 0, 0, 3, 3], ["Atacama", 1, 1, 11, 5, 0, 0, 0, 0], ["Coquimbo", 100, 77, 116, 127, 115, 41, 73, 66], ["Valparaíso", 81, 88, 217, 189, 0, 0, 18, 9], ["Metropolitana", 940, 899, 164, 110, 15, 14, 121, 20], ["O'Higgins", 47, 115, 299, 268, 165, 135, 171, 171], ["Maule", 772, 821, 153, 134, 70, 60, 67, 65], ["Ñuble", 124, 167, 82, 80, 243, 118, 89, 85], ["Biobío", 166, 189, 480, 376, 77, 63, 250, 238], ["Araucanía", 377, 148, 402, 602, 118, 86, 562, 350], ["Los Ríos", 291, 313, 154, 154, 205, 130, 171, 95], ["Los Lagos", 112, 136, 68, 73, 53, 53, 104, 95], ["Aysén", 1, 4, 0, 0, 9, 1, 4, 4], ["Magallanes", 5, 19, 8, 8, 20, 8, 0, 0], ["Total", 3038, 3007, 2162, 2132, 1133, 748, 1657, 1224]], "374": [["Arica y Parinacota", 12, 13, 36, 35, 1, 0], ["Tarapacá", 0, 3, 5, 6, 1, 0], ["Antofagasta", 3, 6, 18, 20, 0, 0], ["Atacama", 7, 2, 2, 2, 2, 2], ["Coquimbo", 246, 172, 72, 66, 13, 13], ["Valparaíso", 290, 8, 320, 307, 27, 18], ["Metropolitana", 455, 553, 1212, 1277, 29, 30], ["O'Higgins", 1511, 1326, 698, 689, 7, 16], ["Maule", 47, 24, 1317, 1262, 3, 5], ["Ñuble", 214, 271, 957, 980, 14, 21], ["Biobío", 617, 628, 660, 676, 1, 9], ["Araucanía", 183, 740, 1869, 1947, 43, 54], ["Los Ríos", 165, 260, 633, 270, 32, 134], ["Los Lagos", 332, 113, 212, 618, 131, 32], ["Aysén", 1, 1, 12, 13, 0, 0], ["Magallanes", 15, 2, 3, 4, 3, 5], ["Total", 4098, 4122, 8026, 8172, 307, 339]]};
 const OFICIOS_DCPR = [
   {
     titulo: "ORD. DCPR N.º 374 · 14 de septiembre de 2026",
     fecha: "14 de septiembre de 2026",
-    descripcion: "Remite antecedentes de solicitudes en proceso de tramitación en etapa de notificación, apelación y envío a tribunales para gestiones administrativas correspondientes. Comparativo nacional agosto-septiembre 2026: Notificación 8.196 → 8.244; Apelación 16.052 → 16.344; Envío a Tribunales 614 → 678."
+    descripcion: "Remite antecedentes de solicitudes en proceso de tramitación en etapa de notificación, apelación y envío a tribunales para gestiones administrativas correspondientes. Comparativo nacional agosto-septiembre 2026: Notificación 4.098 → 4.122; Apelación 8.026 → 8.172; Envío a Tribunales 307 → 339.",
+    detalle: OFICIOS_DETALLE["374"],
+    headers: ["Región","Notificación (ago)","Notificación (sep)","Apelación (ago)","Apelación (sep)","Tribunales (ago)","Tribunales (sep)"],
+    metricas: [{label:"Notificación", idx:[1,2], id:"o374m1"},{label:"Apelación", idx:[3,4], id:"o374m2"},{label:"Tribunales", idx:[5,6], id:"o374m3"}]
   },
   {
     titulo: "ORD. DCPR N.º 372 · 11 de septiembre de 2026",
     fecha: "11 de septiembre de 2026",
-    descripcion: "Remite antecedentes de solicitudes en proceso de tramitación para conocimiento y gestiones correspondientes. Comparativo nacional agosto-septiembre 2026: Resolución C y firma 6.076 → 6.014; Títulos disponibles para entrega 4.324 → 4.264; Chequeo de oposiciones 2.266 → 1.496; Solicitudes ingresadas al CBR sin respuesta 3.314 → 2.448."
+    descripcion: "Remite antecedentes de solicitudes en proceso de tramitación para conocimiento y gestiones correspondientes. Comparativo nacional agosto-septiembre 2026: Resolución C y firma 3.038 → 3.007; Títulos disponibles para entrega 2.162 → 2.132; Chequeo de oposiciones 1.133 → 748; Solicitudes ingresadas al CBR sin respuesta 1.657 → 1.224.",
+    detalle: OFICIOS_DETALLE["372"],
+    headers: ["Región","Res. C y firma (ago)","Res. C y firma (sep)","Títulos disp. (ago)","Títulos disp. (sep)","Chequeo oposiciones (ago)","Chequeo oposiciones (sep)","Solic. CBR s/respuesta (ago)","Solic. CBR s/respuesta (sep)"],
+    metricas: [{label:"Resolución C y firma", idx:[1,2], id:"o372m1"},{label:"Títulos disponibles para entrega", idx:[3,4], id:"o372m2"},{label:"Chequeo de oposiciones", idx:[5,6], id:"o372m3"},{label:"Solicitudes CBR sin respuesta", idx:[7,8], id:"o372m4"}]
   }
 ];
 const META_INDICADOR2 = {"Arica y Parinacota":47.19,"Tarapacá":59.27,"Antofagasta":41.83,"Atacama":67.57,"Coquimbo":30.81,"Valparaíso":47.78,"Metropolitana":7.04,"O'Higgins":14.07,"Maule":10.81,"Ñuble":23.19,"Biobío":39.9,"Araucanía":14.76,"Los Ríos":23.9,"Los Lagos":12.1,"Aysén":78.1,"Magallanes":85};
@@ -2291,8 +2298,23 @@ instrucciones(c,d){
     </div>` : ''}
 ` : ''}
     ${OFICIOS_DCPR.map(o=>`
-    <div class="card"><h3>${o.titulo}</h3><div class="card-sub">${o.fecha}</div><p style="font-size:12.5px;color:var(--texto);margin-top:6px;">${o.descripcion}</p></div>`).join('')}
+    <div class="card"><h3>${o.titulo}</h3><div class="card-sub">${o.fecha}</div><p style="font-size:12.5px;color:var(--texto);margin-top:6px;">${o.descripcion}</p>
+      <div class="grid-2" style="margin-top:10px;">
+        ${o.metricas.map(m=>`<div><div style="font-size:12px;font-weight:700;color:var(--azul-profundo);margin-bottom:4px;">${m.label}</div><div class="chart-wrap tall"><canvas id="${m.id}"></canvas></div></div>`).join('')}
+      </div>
+    </div>`).join('')}
     ${cartucho('o) Instrucciones y Oficios DCPR')}`;
+  OFICIOS_DCPR.forEach(o=>{
+    let regiones = o.detalle.filter(r=>r[0]!=='Total');
+    if(currentRegion!=='todas') regiones = regiones.filter(r=>r[0]===currentRegion);
+    o.metricas.forEach(m=>{
+      charts[m.id]=mkChart(m.id,{type:'bar',
+        data:{labels:regiones.map(r=>r[0]), datasets:[
+          {label:'Agosto',data:regiones.map(r=>r[m.idx[0]]),backgroundColor:'#9AA2AD',borderRadius:3},
+          {label:'Septiembre',data:regiones.map(r=>r[m.idx[1]]),backgroundColor:'#153F66',borderRadius:3}]},
+        options:baseOpts({legend:true,indexAxis:'y'})});
+    });
+  });
   charts.g1=mkChart('chG1',{type:'bar',
     data:{labels:rows.map(r=>r[0]), datasets:[{data:rows.map(r=>parseFloat(r[4])),backgroundColor:rows.map(r=>pctColor(parseFloat(r[4]))),borderRadius:3}]},
     options:baseOpts({legend:false,indexAxis:'y',pct:true})});
