@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gestor de Estadística DCPR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F2; --surface:#FFFFFF; --sunk:#EBEFEA; --ink:#1E2A2F; --muted:#5A6A6E; --line:#D5DCD7;
+  --accent:#2E6B5E; --accent-ink:#FFFFFF; --accent-soft:#DCEBE6; --heat:185,139,46; --warn-bg:#FBF2DC; --warn-ink:#6B4E0E;
+  --chip:#FFFFFF; --drop:#EEF6F3;
+  color-scheme: light;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121819; --surface:#1A2224; --sunk:#222C2E; --ink:#E4EBE8; --muted:#9AAAA6; --line:#2E3A3C;
+    --accent:#62B59E; --accent-ink:#0E1A16; --accent-soft:#1F3631; --heat:214,169,74; --warn-bg:#3A2F14; --warn-ink:#F1D79A;
+    --chip:#222C2E; --drop:#1C2E2A; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121819; --surface:#1A2224; --sunk:#222C2E; --ink:#E4EBE8; --muted:#9AAAA6; --line:#2E3A3C;
+  --accent:#62B59E; --accent-ink:#0E1A16; --accent-soft:#1F3631; --heat:214,169,74; --warn-bg:#3A2F14; --warn-ink:#F1D79A;
+  --chip:#222C2E; --drop:#1C2E2A; color-scheme: dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{max-width:1560px;margin:0 auto;padding:18px 20px 4px;display:flex;align-items:center;gap:16px}
+header .logo{height:80px;width:auto;display:block;border-radius:2px;flex:none}
+header .titles{display:flex;flex-direction:column;gap:2px;min-width:0}
+@media (max-width:520px){header .logo{height:60px}}
+header h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.01em}
+header p{margin:0;color:var(--muted);font-size:14px}
+.app{max-width:1560px;margin:0 auto;padding:12px 20px 40px;display:grid;gap:16px;
+  grid-template-columns:minmax(0,1.7fr) minmax(330px,1fr);grid-template-areas:"report fields" "result pivot"}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.card h2{margin:0 0 10px;font-size:15px;font-weight:600}
+.hint{margin:-4px 0 10px;color:var(--muted);font-size:13px}
+#report{grid-area:report;display:flex;flex-direction:column;gap:12px}
+#fields{grid-area:fields}
+#result{grid-area:result;align-self:start;display:flex;flex-direction:column;gap:12px}
+#side{grid-area:pivot;align-self:start;display:flex;flex-direction:column;gap:16px;min-width:0}
+.help ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}
+.help li{border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:start}
+.help .q{font-weight:600;font-size:14px}
+.help .r{grid-column:1/-1;font-size:13px;color:var(--muted)}
+.mini{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.mini div{background:var(--sunk);border-radius:6px;padding:4px 6px;font-size:12px;min-height:34px}
+.mini b{display:block;font-weight:600;color:var(--muted);font-size:11px}
+.mini span{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin:2px 3px 0 0;color:var(--ink)}
+.saved{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.savedhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.savedhead h2{margin:0}
+.svitem{border:1px solid var(--line);border-radius:9px;padding:9px 10px;margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.svitem .nm{font-weight:600;font-size:14px}
+.svitem .mt{font-size:12px;color:var(--muted)}
+.svitem .tx{font-size:13px;color:var(--muted);font-style:italic}
+.svitem .ac{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
+.badge{display:inline-block;background:var(--accent-soft);color:var(--ink);border-radius:5px;padding:1px 7px;font-size:12px;font-weight:600}
+.svsearch{width:100%;border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:var(--surface);margin-top:8px}
+.searchbar{display:flex;flex-direction:column;gap:4px}
+.sqrow{display:flex;gap:8px;flex-wrap:wrap}
+.sqrow input{flex:1;min-width:220px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;background:var(--surface)}
+.help textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--surface);resize:vertical}
+.nlrow{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.nlres{margin-top:12px;border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.nlres .mini{grid-column:auto}
+.nlres p{margin:0}
+.help .tips{margin:12px 0 0;padding-left:18px;font-size:13px;color:var(--muted)}
+.help .tips li{border:0;padding:0;display:list-item}
+.repsel{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.repsel select{font-size:17px;font-weight:600;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-width:min(100%,340px)}
+.summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px}
+.summary .big{font-size:44px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05}
+.summary .what{color:var(--muted)}
+.palette{display:flex;flex-wrap:wrap;gap:8px}
+.fchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--chip);border-radius:8px;padding:6px 10px;font-size:14px;cursor:grab;user-select:none;touch-action:manipulation}
+.fchip:active{cursor:grabbing}
+.fchip .grip{width:8px;height:14px;background:radial-gradient(circle,var(--muted) 1.2px,transparent 1.4px) 0 0/4px 4px;opacity:.7}
+.fchip.used{opacity:.45}
+.fchip.val{border-color:var(--accent);color:var(--accent);font-weight:600}
+.fchip.val.used{opacity:.55}
+.palsep{width:100%;font-size:12px;color:var(--muted);font-weight:600;margin-top:4px}
+.zones{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.zone{min-width:0;border:1.5px dashed var(--line);border-radius:10px;padding:8px;min-height:120px;background:var(--sunk);display:flex;flex-direction:column;gap:6px;transition:background .1s,border-color .1s}
+.zone.over{border-color:var(--accent);background:var(--drop)}
+.zone h3{margin:0 0 2px;font-size:13px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:6px}
+.zone h3 svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2}
+.zone .empty{font-size:12px;color:var(--muted);padding:4px 2px}
+.zchip{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:5px 6px 5px 8px;font-size:14px;cursor:grab}
+.zchip .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zchip .sel{font-size:12px;color:var(--muted);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.zchip .sel.on{color:var(--accent);font-weight:600}
+.ibtn{border:0;background:none;padding:2px 5px;border-radius:5px;cursor:pointer;color:var(--muted);line-height:1}
+.ibtn:hover{background:var(--sunk);color:var(--ink)}
+.zchip select{font-size:13px;padding:2px 4px;border:1px solid var(--line);border-radius:5px;background:var(--surface);max-width:100%;min-width:0;flex:1}
+.zone[data-zone=vals] .zchip{flex-wrap:wrap}
+.vrow{display:flex;gap:6px;width:100%}
+.vrow select{flex:1}
+.desc{color:var(--muted);font-size:14px;margin:0;max-width:70ch}
+.active{display:flex;flex-wrap:wrap;gap:6px}
+.active span{background:var(--accent-soft);border-radius:6px;padding:2px 8px;font-size:13px}
+.pivfoot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap}
+.linkbtn{border:0;background:none;color:var(--accent);padding:0;cursor:pointer;font-size:13px;text-decoration:underline}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:none;padding:8px 14px;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer;font-weight:500}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.resbar{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:14px}
+.btn.ghost{background:transparent;color:var(--accent)}
+.warn{background:var(--warn-bg);color:var(--warn-ink);border-radius:8px;padding:9px 13px;font-size:14px}
+.warn:empty{display:none}
+.tablebox{overflow:auto;border:1px solid var(--line);border-radius:10px;max-height:620px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:inherit}
+th,td{padding:7px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th.l,td.l{text-align:left}
+thead th{position:sticky;top:0;background:var(--sunk);font-weight:600;z-index:1}
+tbody th{font-weight:500;background:var(--surface)}
+.total{font-weight:700;background:var(--sunk)}
+tfoot td,tfoot th{font-weight:700;background:var(--sunk);position:sticky;bottom:0}
+.chartbar{display:flex;gap:6px;flex-wrap:wrap}
+.chartaxes{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
+.chartaxes label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);font-weight:600}
+.chartaxes select{border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--surface);font-weight:400;color:var(--ink)}
+details.colors{margin-top:8px;font-size:14px}
+details.colors summary{cursor:pointer;font-weight:600;font-size:13px}
+.swatches{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0}
+.swatches label{display:flex;align-items:center;gap:6px;font-size:13px}
+.swatches input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--line);border-radius:5px;background:none;cursor:pointer}
+.quick{display:flex;flex-wrap:wrap;gap:6px}
+.quick h3{width:100%;margin:0;font-size:13px;color:var(--muted);font-weight:600}
+.optbar{display:flex;gap:8px;flex-wrap:wrap}
+.optbtn{border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px;font-weight:600}
+.optbtn[aria-expanded="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.optpanel{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--sunk)}
+.optgrid{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.optpanel label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--muted);font-weight:600}
+.optpanel label.chk{flex-direction:row;align-items:center;gap:6px;color:var(--ink);font-weight:500}
+.optpanel select,.optpanel input[type=text],.optpanel textarea{border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--surface);color:var(--ink);font-weight:400}
+.optcol{display:flex;flex-direction:column;gap:10px}
+.optcol .linkbtn{align-self:flex-start}
+.optsub{font-size:13px;font-weight:600;color:var(--muted);margin-top:10px}
+.titlebar[hidden]{display:none}
+.optpanel .swatches label{flex-direction:row;align-items:center;color:var(--ink);font-weight:500}
+.restitle h3{margin:0;font-size:16px;font-weight:600}
+.restitle p{margin:2px 0 0}
+.titlebar{display:flex;flex-direction:column;gap:4px}
+.titlebar input{width:100%;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface);font-weight:600;font-size:15px}
+.titlebar .linkbtn{align-self:flex-start}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;font-size:13px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chartwrap{position:relative;height:420px}
+details.notes{border-top:1px solid var(--line);padding-top:10px;font-size:14px}
+details.notes summary{cursor:pointer;font-weight:600}
+details.notes ul{padding-left:18px;margin:8px 0}
+.minor{font-size:12px;color:var(--muted)}
+.status{color:var(--muted);padding:40px 0;text-align:center}
+.pop{position:absolute;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:10px;width:280px;display:flex;flex-direction:column;gap:8px}
+.pop h4{margin:0;font-size:14px}
+.pop .list{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:7px;padding:4px 0}
+.pop label{display:flex;gap:8px;align-items:center;padding:3px 10px;font-size:14px;cursor:pointer}
+.pop label:hover{background:var(--sunk)}
+.pop input[type=search],.pop input[type=date]{width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--surface)}
+.pop .row{display:flex;justify-content:flex-end;gap:8px}
+.perlist{display:flex;flex-direction:column;gap:6px}
+.perrow{display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:6px;align-items:center}
+.perrow input{border:1px solid var(--line);border-radius:6px;padding:5px 6px;background:var(--surface);min-width:0}
+.menu{position:absolute;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:4px;display:flex;flex-direction:column;min-width:180px}
+.menu button{border:0;background:none;text-align:left;padding:7px 10px;border-radius:6px;cursor:pointer}
+.menu button:hover,.menu button:focus{background:var(--sunk)}
+.otro{display:grid;gap:10px}
+.otro textarea,.otro select{width:100%;border:1px solid var(--line);border-radius:7px;padding:8px;background:var(--surface)}
+.otro ol{margin:0;padding-left:20px;font-size:14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30}
+.toast.show{opacity:1}
+#offchart{position:fixed;left:-10000px;top:0;width:1400px}
+@media (max-width:520px){.zones{grid-template-columns:1fr}}
+@media (max-width:980px){.app{grid-template-columns:1fr;grid-template-areas:"report" "fields" "pivot" "result"}}
+@media (prefers-reduced-motion:reduce){.toast,.zone{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <img class="logo" src="data:image/jpeg;base64,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" alt="Ministerio de Bienes Nacionales, Gobierno de Chile" width="88" height="80">
+  <div class="titles"><h1>Gestor de Estadística DCPR</h1>
+  <p>División de Constitución de Propiedad Raíz. Paneles anuales 2018–2026</p></div>
+</header>
+<div class="app">
+  <section class="card" id="report" aria-label="Reporte">
+    <h2 style="margin:0">Reporte</h2>
+    <div class="repsel"><label for="rep" class="minor" style="font-weight:600">Todos los reportes</label><select id="rep"></select></div>
+    <div class="quick" id="quick" aria-label="Reportes más usados"></div>
+    <div class="summary" id="sum"><span class="what">Cargando datos…</span></div>
+    <p class="desc" id="desc"></p>
+    <div class="active" id="act" aria-label="Filtros activos"></div>
+  </section>
+  <section class="card" id="fields" aria-label="Campos">
+    <h2>Campos</h2>
+    <p class="hint">Arrastre un campo al cuadro de abajo, o haga clic en él para elegir dónde ubicarlo.</p>
+    <div class="palette" id="palette"></div>
+  </section>
+  <section class="card" id="result" aria-label="Resultado"><div class="status">Cargando datos…</div></section>
+  <div id="side">
+  <section class="card" id="pivot" aria-label="Tabla dinámica">
+    <h2>Tabla dinámica</h2>
+    <div class="zones" id="zones"></div>
+    <div class="pivfoot"><span style="display:flex;gap:12px;flex-wrap:wrap"><button class="btn ghost" id="vaciar" style="padding:4px 12px">Vaciar</button><button class="linkbtn" id="reset">Restablecer diseño del reporte</button></span><span class="minor">Arrastre entre áreas para mover; × para quitar.</span></div>
+  </section>
+  <section class="card help" id="help" aria-label="Requerimiento en texto libre">
+    <h2>Escriba su requerimiento</h2>
+    <p class="hint">Describa lo que necesita con sus palabras; la tabla se arma sola y luego puede ajustarla en la tabla dinámica.</p>
+    <textarea id="nlq" rows="4" placeholder="Ej.: promedio de meses de tramitación por región en 2025, separado por sexo"></textarea>
+    <div class="nlrow"><button class="btn" id="nlgo">Armar tabla</button><span class="minor" id="nlstate"></span></div>
+    <div id="nlout"></div>
+    <div class="saved">
+      <div class="savedhead"><h2>Reportes guardados</h2><button class="btn" id="svbtn">Guardar reporte actual</button></div>
+      <p class="hint" id="svhint">Guarda la configuración (reporte, filtros, filas, columnas, valores, períodos y formato), no las cifras: al abrirlo se calcula con los datos vigentes, incluidos los nuevos cierres de año.</p>
+      <div id="svlist"><p class="minor">Cargando…</p></div>
+    </div>
+  </section>
+  </div>
+</div>
+<canvas id="offchart" width="1400" height="700" aria-hidden="true"></canvas>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script id="meta" type="application/json">{"orps": ["Herencia", "Compraventa", "Simple posesión material", "Cesión de derechos", "Donación", "Subdivisión de hecho", "Municipio", "Ocupación propietario SERVIU", "Permuta", "Otro"], "nreps": 15639, "trms": ["Saneamiento", "Saneamiento contratista", "Título gratuito", "Acta de radicación", "Ley del Sur", "Ley N° 20.062", "Ley N° 19.776"], "N": 1576117, "segs": [{"f": "TITULOS_ENTREGADOS", "y": 2018, "o": 0, "n": 7159, "histadd": 0, "nofolio": 1, "trmcov": 7141, "excl": 0, "adj": 0, "adjr": 0, "nodate": true, "dup": 132, "file": "títulos_entregados_2018.xlsx", "sheet": "titulos entregados 2018", "corte": "31-12-2018", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 9, "sexo": 1, "reg": 0, "costo": 81, "pagar": 81, "subp": 81}, "inh": {"sexo": 17, "inm": 6378, "com": 5493, "costo": 1306, "pagar": 1306, "subp": 1308}, "mds": null}, {"f": "TITULOS_ENTREGADOS", "y": 2019, "o": 7159, "n": 6788, "histadd": 0, "nofolio": 0, "trmcov": 6781, "excl": 0, "adj": 0, "adjr": 0, "nodate": true, "dup": 138, "file": "títulos_entregados_2019.xlsx", "sheet": "Hoja1", "corte": "31-12-2019", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 10, "sexo": 1, "reg": 0, "costo": 20, "pagar": 20, "subp": 19}, "inh": {"sexo": 4, "inm": 6029, "com": 4806, "costo": 5337, "pagar": 5337, "subp": 5378}, "mds": null}, {"f": "TITULOS_ENTREGADOS", "y": 2020, "o": 13947, "n": 7867, "histadd": 0, "nofolio": 0, "trmcov": 7866, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INFORMACIÓN_TÍTULOS_DICIEMBRE_F.xlsx", "sheet": "ENTREGADOS", "corte": "31-12-2020", "miss": {"jefa": 0, "adul": 0, "orig": 3, "inm": 0, "sexo": 0, "reg": 0, "costo": 4, "pagar": 4, "subp": 4}, "inh": {"orig": 996, "inm": 64, "com": 2, "costo": 7522, "pagar": 7522, "subp": 7581}, "mds": null}, {"f": "TITULOS_ENTREGADOS", "y": 2021, "o": 21814, "n": 17066, "histadd": 0, "nofolio": 0, "trmcov": 17061, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INFORMACIÓN_TÍTULOS_DICIEMBRE_F_2021.xlsx", "sheet": "ENTREGADOS", "corte": "31-12-2021", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 1, "sexo": 0, "reg": 0, "costo": 2, "pagar": 2, "subp": 1}, "inh": {"inm": 46, "costo": 16713, "pagar": 16713, "subp": 16883}, "mds": null}, {"f": "TITULOS_ENTREGADOS", "y": 2022, "o": 38880, "n": 11193, "histadd": 0, "nofolio": 0, "trmcov": 11193, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 1, "file": "INFORMACIÓN_TÍTULOS_DICIEMBRE_F_2022.xlsx", "sheet": "ENTREGADOS", "corte": "31-12-2022", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 3, "pagar": 3, "subp": 1}, "inh": {"inm": 37, "costo": 10905, "pagar": 10905, "subp": 11098}, "mds": [1176, 10016]}, {"f": "TITULOS_ENTREGADOS", "y": 2023, "o": 50073, "n": 8688, "histadd": 0, "nofolio": 0, "trmcov": 8688, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INFORMACIÓN_TÍTULOS_DICIEMBRE_F_2023.xlsx", "sheet": "ENTREGADOS", "corte": "31-12-2023", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 2, "pagar": 2, "subp": 1}, "inh": {"costo": 8549, "pagar": 8549, "subp": 8603}, "mds": [8371, 317]}, {"f": "TITULOS_ENTREGADOS", "y": 2024, "o": 58761, "n": 6096, "histadd": 0, "nofolio": 0, "trmcov": 6096, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INFORMACIÓN_TÍTULOS_DICIEMBRE_2024__C__V2.xlsx", "sheet": "ENTREGADOS", "corte": "31-12-2024", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 1, "pagar": 1, "subp": 1}, "inh": {"costo": 6027, "pagar": 6027, "subp": 6062}, "mds": [5979, 117]}, {"f": "TITULOS_ENTREGADOS", "y": 2025, "o": 64857, "n": 5814, "histadd": 0, "nofolio": 0, "trmcov": 5814, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INFORMACIÓN_TÍTULOS_DICIEMBRE_2025.xlsx", "sheet": "ENTREGADOS", "corte": "31-12-2025", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 4, "pagar": 4, "subp": 1}, "inh": {"costo": 5564, "pagar": 5564, "subp": 5760}, "mds": [5743, 71]}, {"f": "TITULOS_ENTREGADOS", "y": 2026, "o": 70671, "n": 3895, "histadd": 0, "nofolio": 0, "trmcov": 3895, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INFORMACIÓN_TÍTULOS_OCTUBRE_2026.xlsx", "sheet": "ENTREGADOS", "corte": "31-10-2026", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 1, "pagar": 1, "subp": 0}, "inh": {"costo": 3842, "pagar": 3842, "subp": 3881}, "mds": [3881, 14]}, {"f": "TITULOS_POR_ENTREGAR", "y": 2019, "o": 74566, "n": 2152, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": true, "dup": 5, "file": "INFORMACIÓN_TÍTULOS.xlsx", "sheet": "POR ENTREGAR", "corte": "31-12-2019", "miss": {"jefa": 4, "adul": 1, "orig": 7, "inm": 3, "sexo": 1, "reg": 0, "costo": 14, "pagar": 14, "subp": 13}, "inh": {"sexo": 2128, "jefa": 2067, "adul": 2124, "orig": 1997, "inm": 2083, "com": 2121, "costo": 1845, "pagar": 1845, "subp": 1867}, "mds": null}, {"f": "TITULOS_POR_ENTREGAR", "y": 2020, "o": 76718, "n": 4382, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INFORMACIÓN_TÍTULOS_DICIEMBRE_F.xlsx", "sheet": "POR ENTREGAR", "corte": "31-12-2020", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 1, "sexo": 0, "reg": 0, "costo": 4, "pagar": 4, "subp": 3}, "inh": {"jefa": 2282, "orig": 59, "inm": 55, "costo": 4226, "pagar": 4226, "subp": 4269}, "mds": null}, {"f": "TITULOS_POR_ENTREGAR", "y": 2021, "o": 81100, "n": 1702, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INFORMACIÓN_TÍTULOS_DICIEMBRE_F_2021.xlsx", "sheet": "POR ENTREGAR", "corte": "31-12-2021", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 2, "sexo": 0, "reg": 0, "costo": 6, "pagar": 6, "subp": 4}, "inh": {"inm": 18, "reg": 307, "costo": 1596, "pagar": 1596, "subp": 1638}, "mds": null}, {"f": "TITULOS_POR_ENTREGAR", "y": 2022, "o": 82802, "n": 2016, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INFORMACIÓN_TÍTULOS_DICIEMBRE_F_2022.xlsx", "sheet": "POR ENTREGAR", "corte": "31-12-2022", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 1, "sexo": 0, "reg": 0, "costo": 5, "pagar": 5, "subp": 3}, "inh": {"inm": 18, "costo": 1915, "pagar": 1915, "subp": 1950}, "mds": [967, 1049]}, {"f": "TITULOS_POR_ENTREGAR", "y": 2023, "o": 84818, "n": 2306, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 405, "file": "INFORMACIÓN_TÍTULOS_DICIEMBRE_F_2023.xlsx", "sheet": "POR ENTREGAR", "corte": "31-12-2023", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 1, "pagar": 1, "subp": 1}, "inh": {"costo": 1871, "pagar": 1871, "subp": 1880}, "mds": [1765, 136]}, {"f": "TITULOS_POR_ENTREGAR", "y": 2024, "o": 87124, "n": 1731, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INFORMACIÓN_TÍTULOS_DICIEMBRE_2024__C__V2.xlsx", "sheet": "POR ENTREGAR", "corte": "31-12-2024", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 1, "pagar": 1, "subp": 1}, "inh": {"jefa": 56, "adul": 5, "orig": 2, "inm": 6, "costo": 1709, "pagar": 1709, "subp": 1719}, "mds": [1631, 100]}, {"f": "TITULOS_POR_ENTREGAR", "y": 2025, "o": 88855, "n": 1344, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INFORMACIÓN_TÍTULOS_DICIEMBRE_2025.xlsx", "sheet": "POR ENTREGAR", "corte": "31-12-2025", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 1, "pagar": 1, "subp": 1}, "inh": {"costo": 1327, "pagar": 1327, "subp": 1334}, "mds": [1329, 15]}, {"f": "TITULOS_POR_ENTREGAR", "y": 2026, "o": 90199, "n": 2101, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INFORMACIÓN_TÍTULOS_OCTUBRE_2026.xlsx", "sheet": "POR ENTREGAR", "corte": "31-10-2026", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 1, "pagar": 1, "subp": 1}, "inh": {"costo": 2072, "pagar": 2072, "subp": 2081}, "mds": [2082, 19]}, {"f": "TRAMITADAS", "y": 2017, "o": 92300, "n": 17981, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "MV_FH_DCPR_2017_VF_12-01-2018.xlsx", "sheet": "NUMERADOR", "corte": "31-12-2017", "miss": {"jefa": 50, "adul": 29, "orig": 47, "inm": 0, "sexo": 0, "reg": 0, "costo": 72, "pagar": 72, "subp": 72}, "inh": {"jefa": 9052, "adul": 12788, "orig": 9523, "costo": 5017, "pagar": 5017, "subp": 5090}, "mds": null}, {"f": "TRAMITADAS", "y": 2018, "o": 110281, "n": 16936, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "MV_FH_DCPR_2018_V4_10-01-2018.xlsx", "sheet": "NUMERADOR", "corte": "31-12-2018", "miss": {"jefa": 44, "adul": 7, "orig": 28, "inm": 0, "sexo": 0, "reg": 0, "costo": 31, "pagar": 31, "subp": 30}, "inh": {"jefa": 9422, "adul": 15748, "orig": 12242, "costo": 11749, "pagar": 11749, "subp": 11802}, "mds": null}, {"f": "TRAMITADAS", "y": 2019, "o": 127217, "n": 22374, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "ESTADO_DE_AVANCE_FH_A_DICIEMBRE_2019.xlsx", "sheet": "FH A DICIEMBRE", "corte": "31-12-2019", "miss": {"jefa": 21, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 2, "pagar": 2, "subp": 0}, "inh": {"jefa": 17623, "adul": 273, "costo": 5, "pagar": 5}, "mds": null}, {"f": "TRAMITADAS", "y": 2020, "o": 149591, "n": 22398, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 396, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "ESTADO_DE_AVANCE_FH_A_DICIEMBRE_V3_2020.xlsx", "sheet": "FH A DICIEMBRE", "corte": "31-12-2020", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 2, "pagar": 2, "subp": 0}, "inh": {"costo": 14, "pagar": 14}, "mds": null}, {"f": "TRAMITADAS", "y": 2021, "o": 171989, "n": 28218, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "ESTADO_DE_AVANCE_FH_A_DICIEMBRE_V2_2021.xlsx", "sheet": "FH A DICIEMBRE", "corte": "31-12-2021", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 1, "pagar": 1, "subp": 0}, "inh": {"costo": 5, "pagar": 5}, "mds": null}, {"f": "TRAMITADAS", "y": 2022, "o": 200207, "n": 25038, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "PANEL_FH_A_DICIEMBRE_v3_2022.xlsx", "sheet": "FH A DICIEMBRE", "corte": "31-12-2022", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {"costo": 1, "pagar": 1}, "mds": "panel"}, {"f": "TRAMITADAS", "y": 2023, "o": 225245, "n": 20813, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "PANEL_TRAMITACIONES_A_DICIEMBRE_2023_V5.xlsx", "sheet": "panel tramitación a diciembre", "corte": "31-12-2023", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 1, "pagar": 1, "subp": 0}, "inh": {"costo": 1, "pagar": 1}, "mds": [20708, 105]}, {"f": "TRAMITADAS", "y": 2024, "o": 246058, "n": 14746, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "PANEL_TRAMITACIONES_A_DICIEMBRE_VF.xlsx", "sheet": "tramitaciones a diciembre", "corte": "31-12-2024", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {}, "mds": [14729, 17]}, {"f": "TRAMITADAS", "y": 2025, "o": 260804, "n": 20196, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "PANEL_TRAMITACIONES_A_DICIEMBRE_2025_VF_08-01-2026.xlsx", "sheet": "tramitación a diciembre", "corte": "31-12-2025", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {"inm": 1}, "mds": [20173, 23]}, {"f": "TRAMITADAS", "y": 2026, "o": 281000, "n": 18144, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "ESTADO_DE_AVANCE_PANEL_TRAMITACIONES_A_OCTUBRE.xlsx", "sheet": "tramitados a octubre", "corte": "31-10-2026", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {"inm": 1}, "mds": [18127, 17]}, {"f": "EN_PROCESO", "y": 2017, "o": 299144, "n": 60607, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 11, "file": "PANEL_DE_CASOS_EN_PROCESO_A_DICIEMBRE_2017.xlsx", "sheet": "TODOS", "corte": "31-12-2017", "miss": {"jefa": 42, "adul": 2, "orig": 29, "inm": 4, "sexo": 2, "reg": 0, "costo": 45, "pagar": 45, "subp": 39}, "inh": {"sexo": 867, "jefa": 35299, "adul": 818, "orig": 43035, "inm": 4310, "costo": 33274, "pagar": 33274, "subp": 37188}, "mds": null}, {"f": "EN_PROCESO", "y": 2018, "o": 359751, "n": 50273, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "PANEL_DE_CASOS_EN_PROCESO_A_DICIEMBRE.xlsx", "sheet": "TODOS", "corte": "31-12-2018", "miss": {"jefa": 21, "adul": 1, "orig": 0, "inm": 1, "sexo": 1, "reg": 0, "costo": 10, "pagar": 10, "subp": 1}, "inh": {"sexo": 774, "jefa": 39506, "adul": 1067, "inm": 655, "costo": 1581, "pagar": 1581, "subp": 2520}, "mds": null}, {"f": "EN_PROCESO", "y": 2019, "o": 410024, "n": 51724, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "PANEL_DE_CASOS_EN_PROCESO_A_DICIEMBRE_2019.xlsx", "sheet": "TODOS", "corte": "31-12-2019", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 1, "sexo": 0, "reg": 0, "costo": 8, "pagar": 8, "subp": 0}, "inh": {"sexo": 845, "inm": 754, "costo": 461, "pagar": 461}, "mds": null}, {"f": "EN_PROCESO", "y": 2020, "o": 461748, "n": 49786, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "PANEL_DE_CASOS_EN_PROCESO_A_DICIEMBRE_1.xlsx", "sheet": "DICIEMBRE", "corte": "31-12-2020", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 5, "pagar": 5, "subp": 0}, "inh": {"inm": 153, "costo": 269, "pagar": 269, "subp": 2898}, "mds": null}, {"f": "EN_PROCESO", "y": 2021, "o": 511534, "n": 48956, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "PANEL_DE_CASOS_EN_PROCESO_A_DICIEMBRE_2021.xlsx", "sheet": "DICIEMBRE", "corte": "31-12-2021", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 7, "pagar": 7, "subp": 0}, "inh": {"sexo": 709, "inm": 425, "costo": 179, "pagar": 179}, "mds": null}, {"f": "EN_PROCESO", "y": 2022, "o": 560490, "n": 52464, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "PANEL_DE_CASOS_EN_PROCESO_A_DICIEMBRE_2022.xlsx", "sheet": "DICIEMBRE", "corte": "31-12-2022", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 6, "pagar": 6, "subp": 0}, "inh": {"inm": 582, "costo": 97, "pagar": 97}, "mds": "panel"}, {"f": "EN_PROCESO", "y": 2023, "o": 612954, "n": 61884, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 1982, "file": "PANEL_DE_CASOS_EN_PROCESO_A_DICIEMBRE_2023.xlsx", "sheet": "DICIEMBRE", "corte": "31-12-2023", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 6, "pagar": 6, "subp": 0}, "inh": {"inm": 234, "costo": 110, "pagar": 110}, "mds": "panel"}, {"f": "EN_PROCESO", "y": 2024, "o": 674838, "n": 61027, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "PANEL_DE_CASOS_EN_PROCESO_A_DICIEMBRE_2024__2_.xlsx", "sheet": "DICIEMBRE", "corte": "31-12-2024", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 6, "pagar": 6, "subp": 0}, "inh": {"inm": 580, "costo": 131, "pagar": 131}, "mds": "panel"}, {"f": "EN_PROCESO", "y": 2025, "o": 735865, "n": 66065, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "PANEL_DE_CASOS_EN_PROCESO_A_DICIEMBRE_2.xlsx", "sheet": "DICIEMBRE", "corte": "31-12-2025", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 6, "pagar": 6, "subp": 0}, "inh": {"costo": 141, "pagar": 141}, "mds": "panel"}, {"f": "EN_PROCESO", "y": 2026, "o": 801930, "n": 66475, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 2, "file": "PANEL_DE_CASOS_EN_PROCESO_A_OCTUBRE.xlsx", "sheet": "OCTUBRE", "corte": "31-10-2026", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 6, "pagar": 6, "subp": 0}, "inh": {"costo": 19, "pagar": 19}, "mds": "panel"}, {"f": "INGRESOS", "y": 2018, "o": 868405, "n": 13348, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "NUEVOS_INGRESOS_2018.xlsx", "sheet": "TODOS", "corte": "31-12-2018", "miss": {"jefa": 21, "adul": 0, "orig": 0, "inm": 1, "sexo": 0, "reg": 0, "costo": 5, "pagar": 5, "subp": 0}, "inh": {"sexo": 169, "jefa": 10588, "adul": 186, "inm": 125, "costo": 1221, "pagar": 1221, "subp": 1161}, "mds": null}, {"f": "INGRESOS", "y": 2019, "o": 881753, "n": 18252, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INGRESADOS_A_DICIEMBRE_2019.xlsx", "sheet": "INGRESADOS A DICIEMBRE 2019", "corte": "31-12-2019", "miss": {"jefa": 7, "adul": 0, "orig": 0, "inm": 1, "sexo": 0, "reg": 0, "costo": 6, "pagar": 6, "subp": 3}, "inh": {"sexo": 136, "jefa": 16947, "inm": 203, "costo": 17102, "pagar": 17102, "subp": 17727}, "mds": null}, {"f": "INGRESOS", "y": 2020, "o": 900005, "n": 13655, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 14, "file": "INGRESADOS_A_DICIEMBRE_2020.xlsx", "sheet": "A DICIEMBRE", "corte": "31-12-2020", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 1, "sexo": 0, "reg": 0, "costo": 4, "pagar": 4, "subp": 2}, "inh": {"sexo": 13, "inm": 99, "costo": 6488, "pagar": 6488, "subp": 6682}, "mds": null}, {"f": "INGRESOS", "y": 2021, "o": 913660, "n": 25279, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INGRESOS_A_DICIEMBRE_2021.xlsx", "sheet": "INGRESOS A DICIEMBRE", "corte": "31-12-2021", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 5, "pagar": 5, "subp": 3}, "inh": {"sexo": 17, "jefa": 114, "adul": 24, "inm": 55, "costo": 24120, "pagar": 24120, "subp": 24415}, "mds": null}, {"f": "INGRESOS", "y": 2022, "o": 938939, "n": 26183, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INGRESOS_A_DICIEMBRE_2022V2.xlsx", "sheet": "INGRESOS A DICIEMBRE", "corte": "31-12-2022", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 6, "pagar": 6, "subp": 4}, "inh": {"jefa": 51, "inm": 230, "costo": 24571, "pagar": 24571, "subp": 25240}, "mds": [25234, 949]}, {"f": "INGRESOS", "y": 2023, "o": 965122, "n": 24059, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INGRESOS_A_DICIEMBRE_2023.xlsx", "sheet": "INGRESOS A DICIEMBRE", "corte": "31-12-2023", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 6, "pagar": 6, "subp": 3}, "inh": {"costo": 22727, "pagar": 22727, "subp": 23253}, "mds": "panel"}, {"f": "INGRESOS", "y": 2024, "o": 989181, "n": 15210, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INGRESOS_A_DICIEMBRE_2024.xlsx", "sheet": "INGRESOS A DICIEMBRE", "corte": "31-12-2024", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 6, "pagar": 6, "subp": 2}, "inh": {"costo": 14237, "pagar": 14237, "subp": 14861}, "mds": "panel"}, {"f": "INGRESOS", "y": 2025, "o": 1004391, "n": 21719, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INGRESOS_A_DICIEMBRE_2025.xlsx", "sheet": "INGRESOS A DICIEMBRE", "corte": "31-12-2025", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 4, "pagar": 4, "subp": 2}, "inh": {"costo": 20750, "pagar": 20750, "subp": 21231}, "mds": "panel"}, {"f": "INGRESOS", "y": 2026, "o": 1026110, "n": 16941, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "INGRESOS_A_OCTUBRE_2026.xlsx", "sheet": "INGRESOS A OCTUBRE", "corte": "31-10-2026", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 6, "pagar": 6, "subp": 4}, "inh": {"inm": 1, "costo": 15934, "pagar": 15934, "subp": 16319}, "mds": "panel"}, {"f": "TIEMPO_TRAMITACION", "y": 2018, "o": 1043051, "n": 11361, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_CASOS_TRAMITADOS.xlsx", "sheet": "TODOS", "corte": "31-12-2018", "miss": {"jefa": 46, "adul": 10, "orig": 41, "inm": 0, "sexo": 0, "reg": 0, "costo": 45, "pagar": 45, "subp": 45}, "inh": {"sexo": 11361, "jefa": 6162, "adul": 10213, "orig": 6677, "inm": 11361, "costo": 6207, "pagar": 6207, "subp": 6251}, "mds": null}, {"f": "TIEMPO_TRAMITACION", "y": 2019, "o": 1054412, "n": 17630, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_TRAMITACIÓN.xlsx", "sheet": "TODOS", "corte": "31-12-2019", "miss": {"jefa": 27, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 2, "pagar": 2, "subp": 0}, "inh": {"sexo": 17630, "jefa": 12910, "adul": 17559, "orig": 17630, "inm": 17630, "costo": 17217, "pagar": 17217, "subp": 17630}, "mds": null}, {"f": "TIEMPO_TRAMITACION", "y": 2020, "o": 1072042, "n": 16794, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 385, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_TRAMITACIÓN_v2.xlsx", "sheet": "TIEMPO PROMEDIO TRAMITACIÓN", "corte": "31-12-2020", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 2, "pagar": 2, "subp": 0}, "inh": {"sexo": 16794, "jefa": 16794, "adul": 16794, "orig": 16794, "inm": 16794, "costo": 16405, "pagar": 16405, "subp": 16794}, "mds": null}, {"f": "TIEMPO_TRAMITACION", "y": 2021, "o": 1088836, "n": 22178, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_TRAMITACIÓN_1.xlsx", "sheet": "TIEMPO PROMEDIO TRAMITACIÓN", "corte": "31-12-2021", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 1, "pagar": 1, "subp": 0}, "inh": {"sexo": 22178, "jefa": 22178, "adul": 22178, "orig": 22178, "inm": 22178, "costo": 21882, "pagar": 21882, "subp": 22178}, "mds": null}, {"f": "TIEMPO_TRAMITACION", "y": 2022, "o": 1111014, "n": 8652, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_TRAMITACIÓN_A_DICIEMBRE.xlsx", "sheet": "TIEMPO PROM TRAMITACIÓN", "corte": "31-12-2022", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 1, "pagar": 1, "subp": 0}, "inh": {"jefa": 7103, "costo": 1, "pagar": 1}, "mds": "panel"}, {"f": "TIEMPO_TRAMITACION", "y": 2023, "o": 1119666, "n": 10439, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_TRAMITACIONES.xlsx", "sheet": "tiempo tramitación a diciembre", "corte": "31-12-2023", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 1, "pagar": 1, "subp": 0}, "inh": {"costo": 1, "pagar": 1}, "mds": [10337, 102]}, {"f": "TIEMPO_TRAMITACION", "y": 2024, "o": 1130105, "n": 8065, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_TRAMITACIÓN_A_DICIEMBRE_1.xlsx", "sheet": "tiempo prom a diciembre", "corte": "31-12-2024", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {"jefa": 215}, "mds": [8048, 17]}, {"f": "TIEMPO_TRAMITACION", "y": 2025, "o": 1138170, "n": 12961, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_TRAMITACIÓN_A_DICIEMBRE_2025.xlsx", "sheet": "tiempo prom tramitacion a dic", "corte": "31-12-2025", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {"inm": 1}, "mds": [12946, 15]}, {"f": "TIEMPO_TRAMITACION", "y": 2026, "o": 1151131, "n": 15624, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_TRAMITACIÓN_A_OCTUBRE.xlsx", "sheet": "tiempo prom tramitacion", "corte": "31-10-2026", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {"inm": 1}, "mds": [15611, 13]}, {"f": "TIEMPO_INGRESO_CBR", "y": 2018, "o": 1166755, "n": 3643, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "PANEL_TIEMPO_PROMEDIO_A_DICIEMBRE.xlsx", "sheet": "TODOS", "corte": "31-12-2018", "miss": {"jefa": 7, "adul": 1, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {"jefa": 3376, "adul": 3618}, "mds": null}, {"f": "TIEMPO_INGRESO_CBR", "y": 2019, "o": 1170398, "n": 8087, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_INGRESO_CBR.xlsx", "sheet": "TODOS", "corte": "31-12-2019", "miss": {"jefa": 2, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {"jefa": 7930, "adul": 117}, "mds": null}, {"f": "TIEMPO_INGRESO_CBR", "y": 2020, "o": 1178485, "n": 8345, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 4203, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_INGRESO_AL_CBR_v2.xlsx", "sheet": "ingreso al cbr a diciembre", "corte": "31-12-2020", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {}, "mds": null}, {"f": "TIEMPO_INGRESO_CBR", "y": 2021, "o": 1186830, "n": 11387, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 4187, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_INGRESO_AL_CBR.xlsx", "sheet": "TIEMPO PROMEDIO INGRESO CBR", "corte": "31-12-2021", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {}, "mds": null}, {"f": "TIEMPO_INGRESO_CBR", "y": 2022, "o": 1198217, "n": 8876, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 1663, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_INGRESO_CBR_A_DICIEMBRE.xlsx", "sheet": "tiempo prom ingreso cbr", "corte": "31-12-2022", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {"jefa": 5860}, "mds": "panel"}, {"f": "TIEMPO_INGRESO_CBR", "y": 2023, "o": 1207093, "n": 3038, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 880, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_INGRESO_AL_CBR_1.xlsx", "sheet": "tiemp ingreso cbr a diciembre", "corte": "31-12-2023", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {}, "mds": [3034, 4]}, {"f": "TIEMPO_INGRESO_CBR", "y": 2024, "o": 1210131, "n": 2272, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 1396, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_INGRESO_AL_CBR_A_DICIEMBRE.xlsx", "sheet": "tiempo ingreso cbr a diciembre", "corte": "31-12-2024", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {"jefa": 3}, "mds": [2272, 0]}, {"f": "TIEMPO_INGRESO_CBR", "y": 2025, "o": 1212403, "n": 2723, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 3763, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_INGRESO_AL_CBR_A_DICIEMBRE_2025.xlsx", "sheet": "tiempo prom ingreso cbr a dic", "corte": "31-12-2025", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {}, "mds": [2723, 0]}, {"f": "TIEMPO_INGRESO_CBR", "y": 2026, "o": 1215126, "n": 569, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 3202, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "TIEMPO_PROMEDIO_INGRESO_AL_CBR_A_OCTUBRE.xlsx", "sheet": "tiempo prom ingr cbr", "corte": "31-10-2026", "miss": {"jefa": 0, "adul": 0, "orig": 0, "inm": 0, "sexo": 0, "reg": 0, "costo": 0, "pagar": 0, "subp": 0}, "inh": {}, "mds": [569, 0]}, {"f": "SISTRED", "y": 2026, "o": 1215695, "n": 360422, "histadd": 0, "nofolio": 0, "trmcov": null, "excl": 0, "adj": 0, "adjr": 0, "nodate": false, "dup": 0, "file": "finalizados_para_carga_gestor_estadistico.xlsx y Finalizados_MGT_20261101_062003.xlsx", "sheet": "SISTRED al 2026-11-02; MGT al 2026-11-01", "corte": "02-11-2026", "miss": {"jefa": 100, "adul": 100, "orig": 100, "inm": 29, "sexo": 29, "reg": 0, "costo": 100, "pagar": 100, "subp": 100}, "inh": {}, "mds": [0, 0]}], "coms": ["Algarrobo", "Alhue", "Alto Biobio", "Alto Del Carmen", "Alto Hospicio", "Ancud", "Andacollo", "Angol", "Antofagasta", "Antuco", "Arauco", "Arica", "Aysen", "Buin", "Bulnes", "Cabildo", "Cabo De Hornos", "Cabrero", "Calama", "Calbuco", "Caldera", "Calera", "Calera De Tango", "Calle Larga", "Camarones", "Camina", "Canela", "Canete", "Carahua", "Carahue", "Cartagena", "Casablanca", "Castro", "Catemu", "Cauquenes", "Cerrillos", "Cerro Navia", "Chaiten", "Chanaral", "Chanco", "Chepica", "Chiguayante", "Chile Chico", "Chillan", "Chillan Viejo", "Chiloe", "Chimbarongo", "Chol Chol", "Chol-Chol", "Cholchol", "Chonchi", "Cisnes", "Cobquecura", "Cochamo", "Cochrane", "Codegua", "Coelemu", "Coihaique", "Coihueco", "Coinco", "Colbun", "Colchane", "Colina", "Collipulli", "Coltauco", "Combarbala", "Con Con", "Concepcion", "Conchali", "Concon", "Constitucion", "Contulmo", "Copiapo", "Coquimbo", "Coronel", "Corral", "Coyhaique", "Cunco", "Curacautin", "Curacavi", "Curaco De Velez", "Curanilahue", "Curarehue", "Curarrehue", "Curepto", "Curico", "Dalcahue", "Diego De Almagro", "Donihue", "E. Central", "El Bosque", "El Carmen", "El Monte", "El Quisco", "El Tabo", "Empedrado", "Ercilla", "Est. Central", "Est.Central", "Estacion Central", "Florida", "Freire", "Freirina", "Fresia", "Frutillar", "Futaleufu", "Futrono", "Galvarino", "General Lagos", "Gorbea", "Graneros", "Guaitecas", "Hijuelas", "Hualaihue", "Hualane", "Hualpen", "Hualqui", "Huara", "Huasco", "Huechuraba", "Hueechuraba", "Ibanez", "Illapel", "Independencia", "Iquique", "Isala De Maipo", "Isla De Maipo", "Isla De Pascua", "Juan Fernandez", "La Calera", "La Cisterna", "La Cruz", "La Estrella", "La Florida", "La Granja", "La Higuera", "La Ligua", "La Pintana", "La Reina", "La Serena", "La Union", "Lago Ranco", "Lago Verde", "Laguna Blanca", "Laja", "Lampa", "Lanco", "Las Cabras", "Las Condes", "Lautaro", "Lebu", "Licanten", "Limache", "Linares", "Litueche", "Llaillay", "Llanquihue", "Llay Llay", "Llay-Llay", "Lo Barnechea", "Lo Espejo", "Lo Prado", "Lolol", "Loncoche", "Longavi", "Lonquimay", "Los Alamos", "Los Andes", "Los Angeles", "Los Lagos", "Los Muermos", "Los Sauces", "Los Vilos", "Lota", "Lumaco", "Machali", "Macul", "Mafil", "Maipu", "Malloa", "Marchigue", "Marchihue", "Maria Elena", "Maria Pinto", "Mariquina", "Maule", "Maullin", "Mejillones", "Melipeuco", "Melipilla", "Molina", "Monte Patria", "Mostazal", "Mulchen", "N Imperial", "N.Imperial", "N/A", "Nacimiento", "Nan", "Nancagua", "Natales", "Navidad", "Negrete", "Ninhue", "Niquen", "Nogales", "Nueva Imperial", "Nunoa", "O Higgins", "O'Higgins", "Olivar", "Ollague", "Olmue", "Osorno", "Ovalle", "O`Higgins", "P Las Casas", "P Lascasas", "P.A.C", "P.A.C.", "P.Aguirre Cerda", "Pac", "Padre Hurtado", "Padre Las Casas", "Paihuano", "Paillaco", "Paine", "Palena", "Palmilla", "Panguipulli", "Panquehue", "Papudo", "Paredones", "Parral", "Pedro Aguirre Cerda", "Pelarco", "Pelluhue", "Pemuco", "Penaflor", "Penalolen", "Pencahue", "Penco", "Peralillo", "Perdo Aguirre Cerda", "Perquenco", "Petorca", "Peumo", "Pica", "Pichidegua", "Pichilemu", "Pinto", "Pirque", "Pitrufquen", "Placilla", "Portezuelo", "Porvenir", "Pozo Almonte", "Primavera", "Providencia", "Puchuncavi", "Pucon", "Pudahuel", "Puente Alto", "Puerto Montt", "Puerto Octay", "Puerto Varas", "Pumanque", "Punitaqui", "Punta Arenas", "Puqueldon", "Puren", "Purranque", "Putaendo", "Putre", "Puyehue", "Queilen", "Quellon", "Quemchi", "Quilaco", "Quilicura", "Quilleco", "Quillon", "Quillota", "Quilpue", "Quinchao", "Quinta De Tilcoco", "Quinta Normal", "Quintero", "Quirihue", "Rancagua", "Ranquil", "Rauco", "Recolera", "Recoleta", "Renaico", "Renca", "Rengo", "Requinoa", "Retiro", "Rinconada", "Rinconada De Los Andes", "Rio Bueno", "Rio Claro", "Rio Hurtado", "Rio Ibanez", "Rio Negro", "Romeral", "S.P.Atacama", "Saavedra", "Sagrada Familia", "Salamanca", "San Antonio", "San Bernardo", "San Carlos", "San Clemente", "San Esteban", "San Fabian", "San Felipe", "San Fernando", "San Ignacio", "San Javier", "San Javier De Loncomilla", "San Joaquin", "San Jose De Maipo", "San Juan De La Costa", "San Miguel", "San Nicolas", "San Pablo", "San Pedro", "San Pedro De Atacama", "San Pedro De La Paz", "San Rafael", "San Ramon", "San Rosendo", "San Vicente", "San Vicente De Tagua Tagua", "Santa Babara", "Santa Barbara", "Santa Cruz", "Santa Juana", "Santa Maria", "Santiago", "Santo Domingo", "Sierra Gorda", "T Schmidt", "T. Amarilla", "Talagante", "Talca", "Talcahuano", "Taltal", "Temuco", "Teno", "Teodoro Schmidt", "Tierra Amarilla", "Til Til", "Tiltil", "Tirua", "Tocopilla", "Tolten", "Tome", "Torres Del Paine", "Tortel", "Traiguen", "Treahuaco", "Treguaco", "Trehuaco", "Tucapel", "Valdivia", "Vallenar", "Valparaiso", "Vichuquen", "Victoria", "Vicuna", "Vilcun", "Villa Alegre", "Villa Alemana", "Villa O Higgins", "Villarrica", "Vina Del Mar", "Vitacura", "Yerbas Buenas", "Yumbel", "Yungay", "Zapallar"], "comreg": [6, 7, 11, 4, 2, 14, 5, 12, 3, 11, 11, 1, 15, 7, 10, 6, 16, 11, 3, 14, 4, 6, 7, 6, 1, 2, 5, 11, 12, 12, 6, 6, 14, 6, 9, 7, 7, 14, 4, 9, 8, 11, 15, 10, 10, 14, 8, 12, 12, 12, 14, 15, 10, 14, 15, 8, 11, 15, 10, 8, 9, 2, 7, 12, 8, 5, 6, 11, 7, 6, 9, 11, 4, 5, 11, 13, 15, 12, 12, 7, 14, 11, 12, 12, 9, 9, 14, 4, 8, 7, 7, 10, 7, 6, 6, 9, 12, 7, 7, 7, 11, 12, 4, 14, 14, 14, 13, 12, 1, 12, 8, 15, 6, 14, 9, 11, 11, 2, 4, 7, 7, 15, 5, 7, 2, 7, 7, 6, 6, 6, 7, 6, 8, 7, 7, 5, 6, 7, 7, 5, 13, 13, 15, 16, 11, 7, 13, 8, 7, 12, 11, 9, 6, 9, 8, 6, 14, 6, 6, 7, 7, 7, 8, 12, 9, 12, 11, 6, 11, 13, 14, 12, 5, 11, 12, 8, 7, 13, 7, 8, 8, 8, 3, 7, 13, 9, 14, 3, 12, 7, 9, 5, 8, 11, 12, 12, 9, 11, 0, 8, 16, 8, 11, 11, 10, 6, 12, 7, 15, 15, 8, 3, 6, 14, 5, 15, 12, 12, 7, 7, 7, 7, 7, 12, 5, 13, 7, 14, 8, 13, 6, 6, 8, 9, 7, 9, 9, 10, 7, 7, 9, 11, 8, 7, 12, 6, 8, 2, 8, 8, 10, 7, 12, 8, 11, 16, 2, 16, 7, 6, 12, 7, 7, 14, 14, 14, 8, 5, 16, 14, 12, 14, 6, 1, 14, 14, 14, 14, 11, 7, 11, 10, 6, 6, 14, 8, 7, 6, 10, 8, 10, 9, 7, 7, 12, 7, 8, 8, 9, 6, 6, 13, 9, 5, 15, 14, 9, 3, 12, 9, 5, 6, 7, 10, 9, 6, 10, 6, 8, 10, 9, 9, 7, 7, 14, 7, 10, 14, 7, 3, 11, 9, 7, 11, 8, 8, 11, 11, 8, 11, 6, 7, 6, 3, 12, 4, 7, 9, 11, 3, 12, 9, 12, 4, 7, 7, 11, 3, 12, 11, 16, 15, 12, 10, 10, 10, 11, 13, 4, 6, 9, 12, 5, 12, 9, 6, 15, 12, 6, 7, 9, 11, 10, 6], "regs": ["Arica y Parinacota", "Tarapacá", "Antofagasta", "Atacama", "Coquimbo", "Valparaíso", "Metropolitana", "O’Higgins", "Maule", "Ñuble", "Biobío", "La Araucanía", "Los Ríos", "Los Lagos", "Aysén", "Magallanes"]}</script>
+<script id="blob" type="text/plain"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+(function(){
+const META=JSON.parse(document.getElementById('meta').textContent);
+const N=META.N,SEGS=META.segs,COMS=META.coms,COMREG=META.comreg,REGS=META.regs;
+const D={};
+const NAMES={TITULOS_ENTREGADOS:'Títulos entregados',TITULOS_POR_ENTREGAR:'Títulos por entregar',TRAMITADAS:'Solicitudes tramitadas',EN_PROCESO:'Solicitudes en proceso',INGRESOS:'Nuevas solicitudes ingresadas',TIEMPO_TRAMITACION:'Tiempo promedio de tramitación',TIEMPO_INGRESO_CBR:'Tiempo promedio de ingreso al CBR'};
+const REPORTS=[
+ {id:'tent',name:'Títulos entregados',fam:'TITULOS_ENTREGADOS',fecha:'fecha de entrega',desc:'Expedientes con título entregado en el año del panel. 2018 y 2019 no tienen fecha exacta de entrega.'},
+ {id:'tpor',name:'Títulos por entregar',fam:'TITULOS_POR_ENTREGAR',fecha:'fecha de ingreso',stock:true,desc:'Stock de títulos pendientes de entrega a la fecha de corte de cada panel.'},
+ {id:'tram',name:'Solicitudes tramitadas',fam:'TRAMITADAS',fecha:'fecha de tramitación',desc:'Tramitación positiva (ingreso al CBR), negativa (resolución denegatoria) o envío a tribunales durante el año. No incluye casos no tramitados, en proceso ni publicados.'},
+ {id:'ttipo',name:'Solicitudes tramitadas por tipo',fam:'TRAMITADAS',fecha:'fecha de tramitación',cols:['tipo'],desc:'Solicitudes tramitadas desagregadas en positiva, negativa y enviada a tribunales.'},
+ {id:'proc',name:'Solicitudes en proceso',fam:'EN_PROCESO',fecha:'fecha de ingreso',stock:true,desc:'Stock de casos abiertos en SISTRED y MGT a la fecha de corte de cada panel (31 de diciembre; 2026 al 31 de octubre).'},
+ {id:'ing',name:'Nuevas solicitudes ingresadas',fam:'INGRESOS',fecha:'fecha de ingreso',desc:'Solicitudes ingresadas al sistema durante el año del panel. No hay archivo para 2017.'},
+ {id:'ttram',name:'Tiempo promedio de tramitación',fam:'TIEMPO_TRAMITACION',fecha:'fecha de término',tiempo:true,desc:'Meses entre el ingreso y la tramitación (ingreso al CBR o resolución negativa), en meses de 30 días.'},
+ {id:'sis',name:'Casos finalizados y en proceso (SISTRED y MGT)',fam:'SISTRED',fecha:'fecha de término',cols:['est'],desc:'Universo de casos SISTRED (saneamiento; en proceso y finalizados, al 02-11-2026) y de casos finalizados MGT (todos los trámites, al 01-11-2026). Permite filtrar por fecha de término y de ingreso, estado, sistema, trámite y origen de la posesión, y buscar por representante, dirección o N° de expediente.'},
+ {id:'tcbr',name:'Tiempo promedio de ingreso al CBR',fam:'TIEMPO_INGRESO_CBR',fecha:'fecha de ingreso al CBR',tiempo:true,desc:'Meses entre el ingreso de la solicitud y su ingreso al Conservador de Bienes Raíces, en meses de 30 días.'}
+];
+const L={sexo:['Sin información','Mujer','Hombre','Persona jurídica'],yn:['Sin información','Sí','No'],inm:['Sin información','Urbano','Rural'],sis:['Sin información','SISTRED','MGT','Otro'],tipo:['—','Positiva','Negativa','Enviada a tribunales']};
+const MESES=['Sin fecha','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const FIELDS=[
+ {k:'fecha',label:'Fecha',filterOnly:true},{k:'fing',label:'Fecha de ingreso',filterOnly:true,only:['SISTRED']},{k:'est',label:'Estado',only:['SISTRED']},{k:'orp',label:'Origen de la posesión',only:['SISTRED']},{k:'repp',label:'Con representante',only:['SISTRED']},{k:'ying',label:'Año de ingreso',only:['SISTRED']},{k:'yter',label:'Año de término',only:['SISTRED']},{k:'per',label:'Período'},
+ {k:'anio',label:'Año',not:['SISTRED']},{k:'mes',label:'Mes'},{k:'reg',label:'Región'},{k:'com',label:'Comuna'},
+ {k:'sexo',label:'Sexo'},{k:'jefa',label:'Jefa de hogar',not:['SISTRED']},{k:'adul',label:'Adulto mayor',not:['SISTRED']},{k:'orig',label:'Pueblo originario',not:['SISTRED']},
+ {k:'inm',label:'Tipo de inmueble'},{k:'sis',label:'Sistema'},{k:'tipo',label:'Tipo de tramitación',only:['TRAMITADAS','TIEMPO_TRAMITACION']},{k:'trm',label:'Trámite',only:['TITULOS_ENTREGADOS','SISTRED']}
+];
+const FL=Object.fromEntries(FIELDS.map(f=>[f.k,f]));
+const MISS={jefa:1,adul:1,orig:1,inm:1,sexo:1};
+const D0=Date.UTC(2000,0,1),DAY=86400000;
+const fmt=new Intl.NumberFormat('es-CL'),fmt1=new Intl.NumberFormat('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1});
+const $=s=>document.querySelector(s);
+function yearLabel(y){return y===2026?'2026 (a oct.)':String(y)}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600)}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+
+const st={periods:[],opt:null,note:'',tbl:{rowTot:true,colTot:true,heat:true,dec:'auto',sort:'label',size:'m'},copt:{labels:true,legend:true,size:'m'},rep:'tram',filters:[],rows:[],cols:[],itemSel:{},vals:[{f:'exp',agg:'count',show:'none'}],chartVal:0,view:'tabla',chart:'col',chartAxis:null,chartSeries:null,colors:{},title:''};
+const rep=()=>REPORTS.find(r=>r.id===st.rep);
+const fam=()=>rep().fam;
+const segsOf=f=>SEGS.filter(s=>s.f===f);
+const allowedFor=(k,fm)=>{const f=FL[k];return !!f&&(!f.only||f.only.includes(fm))&&(!f.not||!f.not.includes(fm))};const allowed=k=>allowedFor(k,fam());
+
+async function load(){
+  const b64=document.getElementById('blob').textContent.trim();let bin;
+  if(b64.length>100)bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+  else{const r=await fetch('datos/datos.bin');if(!r.ok)throw new Error('no se encontró datos/datos.bin junto al index.html');bin=new Uint8Array(await r.arrayBuffer())}
+  const buf=await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+  let o=0;D.costo=new Uint32Array(buf,o,N);o+=4*N;D.pagar=new Uint32Array(buf,o,N);o+=4*N;D.date=new Uint16Array(buf,o,N);o+=2*N;D.com=new Uint16Array(buf,o,N);o+=2*N;D.mes=new Uint16Array(buf,o,N);o+=2*N;D.date2=new Uint16Array(buf,o,N);o+=2*N;D.rep=new Uint16Array(buf,o,N);o+=2*N;
+  D.reg=new Uint8Array(buf,o,N);o+=N;D.b1=new Uint8Array(buf,o,N);o+=N;D.b2=new Uint8Array(buf,o,N);o+=N;D.subp=new Uint8Array(buf,o,N);o+=N;D.trm=new Uint8Array(buf,o,N);o+=N;D.est=new Uint8Array(buf,o,N);o+=N;D.orp=new Uint8Array(buf,o,N);
+}
+const dnum=s=>Math.round((Date.parse(s)-D0)/DAY);
+let PERD=[],PERY={};
+function prepPeriods(){PERD=st.periods.map(p=>[p.from?dnum(p.from):-1e9,p.to?dnum(p.to):1e9]);PERY={}}
+function perOfYear(y){if(y in PERY)return PERY[y];const a=dnum(y+'-01-01'),b=dnum((y===2026?'2026-10-31':y+'-12-31'));let best=0,bd=0;
+  PERD.forEach(([f,t],j)=>{const o=Math.min(b,t)-Math.max(a,f)+1;if(o>bd){bd=o;best=j+1}});return PERY[y]=best}
+function keyOf(k,i,s){
+  if(k==='trm')return D.trm[i];
+  if(k==='est')return D.est[i];if(k==='orp')return D.orp[i];if(k==='repp')return D.rep[i]?1:2;
+  if(k==='ying'){const d=D.date2[i];return d?new Date(D0+d*DAY).getUTCFullYear():0}
+  if(k==='yter'){const d=D.date[i];return d?new Date(D0+d*DAY).getUTCFullYear():0}
+  if(k==='per'){const d=D.date[i];if(!d)return (s.nodate||(D.b2[i]&64))?perOfYear(s.y):0;for(let j=0;j<PERD.length;j++){if(d>=PERD[j][0]&&d<=PERD[j][1])return j+1}return 0}
+  switch(k){case 'anio':return s.y;case 'mes':{const d=D.date[i];return d?new Date(D0+d*DAY).getUTCMonth()+1:0}
+    case 'reg':return D.reg[i];case 'com':return D.com[i];case 'sexo':return D.b1[i]&3;case 'jefa':return (D.b1[i]>>2)&3;
+    case 'adul':return (D.b1[i]>>4)&3;case 'orig':return (D.b1[i]>>6)&3;case 'inm':return D.b2[i]&3;case 'sis':return (D.b2[i]>>2)&3;case 'tipo':return (D.b2[i]>>4)&3}
+}
+function labelOf(k,v){
+  if(k==='trm')return v?META.trms[v-1]:'Sin información';
+  if(k==='est')return ['Sin información','Finalizado','En proceso','Sin fecha de término'][v];if(k==='orp')return v?META.orps[v-1]:'Sin información';if(k==='repp')return L.yn[v];
+  if(k==='ying')return v?String(v):'Sin fecha';if(k==='yter')return v?String(v):'Sin término';
+  if(k==='per')return v&&st.periods[v-1]?st.periods[v-1].name:'Fuera de los períodos';
+  switch(k){case 'anio':return yearLabel(v);case 'mes':return MESES[v];case 'reg':return v?REGS[v-1]:'Sin información';case 'com':return v?COMS[v-1]:'Sin información';
+    case 'sexo':return L.sexo[v];case 'inm':return L.inm[v];case 'sis':return L.sis[v];case 'tipo':return L.tipo[v];default:return L.yn[v]}
+}
+function optionsOf(k){
+  if(k==='per')return st.periods.map((_,i)=>i+1);
+  if(k==='trm')return META.trms.map((_,i)=>i+1).concat([0]);
+  if(k==='est')return [1,2,3];if(k==='orp')return META.orps.map((_,i)=>i+1).concat([0]);if(k==='repp')return [1,2];
+  if(k==='ying'||k==='yter'){const a=[];for(let y=1995;y<=2026;y++)a.push(y);return a.concat([0])}
+  switch(k){case 'anio':return segsOf(fam()).map(s=>s.y);case 'mes':return [1,2,3,4,5,6,7,8,9,10,11,12,0];
+    case 'reg':return REGS.map((_,i)=>i+1).concat([0]);
+    case 'com':{const rf=st.filters.find(f=>f.k==='reg'&&f.sel);return COMS.map((_,i)=>i+1).filter(id=>!rf||rf.sel.has(COMREG[id-1])).concat([0])}
+    case 'sexo':return [1,2,3,0];case 'inm':return [1,2,0];case 'sis':return [1,2,3,0];case 'tipo':return [1,2,3];default:return [1,2,0]}
+}
+function cmpKeys(k){return (a,b)=>{if(a===0&&b!==0)return 1;if(b===0&&a!==0)return -1;if(k==='com')return labelOf(k,a).localeCompare(labelOf(k,b),'es');return a-b}}
+
+// ---------- reporte ----------
+const NUMF={exp:{label:'Expedientes'},meses:{label:'Meses',only:'tiempo'},costo:{label:'Costo del caso ($)',money:1},subs:{label:'Monto subsidiado ($)',money:1},pagar:{label:'Monto a pagar ($)',money:1},subp:{label:'% de subsidio',pctv:1}};
+const AGGL={count:'Cuenta',sum:'Suma',avg:'Promedio',min:'Mínimo',max:'Máximo',med:'Mediana',yavg:'Promedio anual',mavg:'Promedio mensual'};
+const TIT=['TITULOS_ENTREGADOS','TITULOS_POR_ENTREGAR'];
+function numAllowedFor(k,r){const v=NUMF[k];if(!v)return false;if(v.only==='tiempo')return !!r.tiempo||r.fam==='SISTRED';if(k!=='exp')return !TIT.includes(r.fam)&&r.fam!=='SISTRED';return true}
+function vAllowed(f){return NUMF[f]?numAllowedFor(f,rep()):(!!FL[f]&&allowed(f)&&!FL[f].filterOnly)}
+function aggsOfFor(f,r){if(f==='exp'){if(r.fam==='SISTRED')return ['count','sum'];const a=['count','sum','yavg','mavg'];return r.stock?a.filter(x=>x!=='mavg'):a}
+  if(NUMF[f])return f==='subp'?['count','avg','min','max']:f==='meses'?['count','sum','avg','min','max','med']:['count','sum','avg','min','max'];return ['count']}
+const aggsOf=f=>aggsOfFor(f,rep());
+function vLabel(f){return NUMF[f]?NUMF[f].label:FL[f].label}
+function fixVals(){st.vals=st.vals.filter(v=>vAllowed(v.f));st.vals.forEach(v=>{if(!aggsOf(v.f).includes(v.agg))v.agg=aggsOf(v.f)[0];if(!['count','sum'].includes(v.agg))v.show='none'});if(st.chartVal>=st.vals.length)st.chartVal=0}
+function defaults(){const r=rep();st.filters=[];st.rows=['reg'];st.cols=r.cols?r.cols.slice():['anio'];st.vals=[r.tiempo?{f:'meses',agg:'avg',show:'none'}:{f:'exp',agg:'count',show:'none'}];st.chartVal=0;st.title='';st.itemSel={};st.chartAxis=null;st.chartSeries=null;st.q='';SMASK=null}
+function initReport(){
+  const s=$('#rep');s.innerHTML=REPORTS.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');s.value=st.rep;
+  s.onchange=()=>{st.rep=s.value;if(st.rep!=='otro')defaults();renderAll()};
+  renderQuick();
+  $('#reset').onclick=()=>{if(st.rep!=='otro'){defaults();renderAll()}};
+  $('#vaciar').onclick=()=>{if(st.rep==='otro')return;st.filters=[];st.rows=[];st.cols=[];st.itemSel={};st.chartAxis=null;st.chartSeries=null;st.title='';renderAll();toast('Tabla dinámica vaciada')};
+}
+
+// ---------- paleta y zonas ----------
+const ZONES=[['filters','Filtros','<path d="M3 5h18l-7 8v6l-4-2v-4z"/>'],['cols','Columnas','<path d="M4 4h16v16H4zM12 4v16"/>'],['rows','Filas','<path d="M4 4h16v16H4zM4 12h16"/>'],['vals','Valores','<path d="M5 20V10M12 20V4M19 20v-7"/>']];
+function zoneOf(k){for(const z of ['filters','rows','cols'])if((z==='filters'?st.filters.map(f=>f.k):st[z]).includes(k))return z;return null}
+function removeField(k){st.filters=st.filters.filter(f=>f.k!==k);st.rows=st.rows.filter(x=>x!==k);st.cols=st.cols.filter(x=>x!==k);delete st.itemSel[k]}
+function selObj(k){return st.filters.find(f=>f.k===k)||(st.rows.includes(k)||st.cols.includes(k)?(st.itemSel[k]||(st.itemSel[k]={k,sel:null})):null)}
+function activeSels(){return st.filters.filter(filterActive).concat(Object.values(st.itemSel).filter(f=>f.sel&&(st.rows.includes(f.k)||st.cols.includes(f.k))))}
+function addValue(k){const f=k.startsWith('v:')?k.slice(2):k;if(!vAllowed(f)){toast('Ese campo no está disponible en este reporte');return}
+  if(st.vals.length>=4){toast('Máximo cuatro campos en Valores');return}
+  const ag=aggsOf(f);st.vals.push({f,agg:NUMF[f]&&NUMF[f].money?'sum':(f==='meses'?'avg':ag[0]),show:'none'});renderAll()}
+function place(k,zone,before){
+  if(zone==='vals'){addValue(k);return}
+  if(k.startsWith('v:')){addValue(k);return}
+  if(!FL[k])return;
+  if(FL[k].filterOnly&&zone!=='filters'){toast('«Fecha» solo se usa como filtro. Para agrupar use «Año» o «Mes».');zone='filters'}
+  const prevF=st.filters.find(f=>f.k===k)||st.itemSel[k];removeField(k);
+  if(zone==='filters'){const f=prevF?{k,sel:prevF.sel||null,from:prevF.from||'',to:prevF.to||''}:{k,sel:null,from:'',to:''};const i=before?st.filters.findIndex(x=>x.k===before):-1;i<0?st.filters.push(f):st.filters.splice(i,0,f);
+    if(!prevF)setTimeout(()=>{const el=document.querySelector(`.zchip[data-k="${k}"] .opn`);if(el)openFilter(k,el)},0)}
+  if(k==='per'&&!st.periods.length&&zone!=='filters')setTimeout(()=>{const el=document.querySelector(`.zchip[data-k="per"] .opn`);if(el)openPeriods(el)},0);
+  else if(zone){const arr=st[zone];const i=before?arr.indexOf(before):-1;i<0?arr.push(k):arr.splice(i,0,k);if(prevF&&prevF.sel)st.itemSel[k]={k,sel:prevF.sel}}
+  renderAll();
+}
+function dragData(e,k,from){e.dataTransfer.setData('text/plain',JSON.stringify({k,from}));e.dataTransfer.effectAllowed='move'}
+function renderPalette(){
+  const p=$('#palette');p.innerHTML='';
+  if(st.rep==='otro'){p.innerHTML='<p class="minor">Elija un reporte para ver sus campos.</p>';return}
+  FIELDS.filter(f=>allowed(f.k)).forEach(f=>{
+    const b=document.createElement('button');b.className='fchip'+(zoneOf(f.k)?' used':'');b.draggable=true;b.innerHTML='<span class="grip" aria-hidden="true"></span>'+esc(f.label);
+    b.setAttribute('aria-label',f.label+(zoneOf(f.k)?' (en uso)':''));
+    b.ondragstart=e=>dragData(e,f.k,'palette');b.onclick=()=>openMenu(f.k,b);p.appendChild(b)});
+  const h=document.createElement('div');h.className='palsep';h.textContent='Campos numéricos (para Valores)';p.appendChild(h);
+  Object.keys(NUMF).filter(k=>numAllowedFor(k,rep())).forEach(k=>{
+    const b=document.createElement('button');b.className='fchip val'+(st.vals.some(v=>v.f===k)?' used':'');b.draggable=true;b.innerHTML='<span class="grip" aria-hidden="true"></span>Σ '+esc(NUMF[k].label);
+    b.ondragstart=e=>dragData(e,'v:'+k,'palette');b.onclick=()=>openMenu('v:'+k,b);p.appendChild(b)});
+  p.ondragover=e=>e.preventDefault();
+  p.ondrop=e=>{e.preventDefault();try{const d=JSON.parse(e.dataTransfer.getData('text/plain'));if(d.from==='vals'){st.vals.splice(+d.k.slice(3),1);renderAll()}else if(d.from!=='palette'){removeField(d.k);renderAll()}}catch(_){}};
+}
+function renderZones(){
+  const z=$('#zones');z.innerHTML='';
+  ZONES.forEach(([id,title,icon])=>{
+    const d=document.createElement('div');d.className='zone';d.dataset.zone=id;
+    d.innerHTML=`<h3><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg>${title}</h3>`;
+    if(st.rep==='otro'){d.insertAdjacentHTML('beforeend','<span class="empty">—</span>');z.appendChild(d);return}
+    if(id==='vals'){
+      fixVals();
+      if(!st.vals.length)d.insertAdjacentHTML('beforeend','<span class="empty">Suelte aquí Expedientes, un monto u otro campo</span>');
+      st.vals.forEach((v,vi)=>{
+        const c=document.createElement('div');c.className='zchip vchip';c.draggable=true;
+        c.ondragstart=e=>{e.stopPropagation();e.dataTransfer.setData('text/plain',JSON.stringify({k:'vi:'+vi,from:'vals'}));e.dataTransfer.effectAllowed='move'};
+        c.innerHTML=`<span class="name">${esc(vLabel(v.f))}</span>`;
+        const x=document.createElement('button');x.className='ibtn';x.textContent='×';x.setAttribute('aria-label','Quitar '+vLabel(v.f)+' de Valores');x.onclick=()=>{st.vals.splice(vi,1);renderAll()};c.appendChild(x);
+        const r1=document.createElement('div');r1.className='vrow';
+        const s1=document.createElement('select');s1.setAttribute('aria-label','Cálculo de '+vLabel(v.f));s1.innerHTML=aggsOf(v.f).map(a=>`<option value="${a}">${AGGL[a]}</option>`).join('');s1.value=v.agg;
+        s1.onchange=()=>{v.agg=s1.value;fixVals();renderAll()};r1.appendChild(s1);
+        if(['count','sum'].includes(v.agg)){const s2=document.createElement('select');s2.setAttribute('aria-label','Mostrar como');s2.innerHTML='<option value="none">Valor</option><option value="tot">% del total</option><option value="row">% de la fila</option><option value="col">% de la columna</option>';s2.value=v.show;s2.onchange=()=>{v.show=s2.value;renderAll()};r1.appendChild(s2)}
+        c.appendChild(r1);d.appendChild(c)});
+      d.ondragover=e=>{e.preventDefault();d.classList.add('over')};d.ondragleave=e=>{if(!d.contains(e.relatedTarget))d.classList.remove('over')};
+      d.ondrop=e=>{e.preventDefault();d.classList.remove('over');try{const x=JSON.parse(e.dataTransfer.getData('text/plain'));if(x.from!=='vals')addValue(x.k)}catch(_){}};
+      z.appendChild(d);return}
+    const items=id==='filters'?st.filters.map(f=>f.k):st[id];
+    if(!items.length)d.insertAdjacentHTML('beforeend','<span class="empty">Suelte campos aquí</span>');
+    items.forEach(k=>{
+      const c=document.createElement('div');c.className='zchip';c.draggable=true;c.dataset.k=k;
+      c.ondragstart=e=>{e.stopPropagation();dragData(e,k,id)};
+      c.ondragover=e=>{e.preventDefault()};
+      c.ondrop=e=>{e.preventDefault();e.stopPropagation();d.classList.remove('over');try{const x=JSON.parse(e.dataTransfer.getData('text/plain'));if(x.k!==k)place(x.k,id,k)}catch(_){}};
+      c.innerHTML=`<span class="name">${esc(FL[k].label)}</span>`;
+      {const f=selObj(k);const s=document.createElement('button');s.className='ibtn opn';s.innerHTML=`<span class="sel${filterActive(f)?' on':''}">${esc(filterText(f))}</span> ▾`;s.setAttribute('aria-label','Elegir valores de '+FL[k].label);s.onclick=()=>openFilter(k,s);c.appendChild(s)}
+      const x=document.createElement('button');x.className='ibtn';x.textContent='×';x.setAttribute('aria-label','Quitar '+FL[k].label);x.onclick=()=>{removeField(k);renderAll()};c.appendChild(x);
+      d.appendChild(c)});
+    d.ondragover=e=>{e.preventDefault();d.classList.add('over')};d.ondragleave=e=>{if(!d.contains(e.relatedTarget))d.classList.remove('over')};
+    d.ondrop=e=>{e.preventDefault();d.classList.remove('over');try{const x=JSON.parse(e.dataTransfer.getData('text/plain'));place(x.k,id)}catch(_){}};
+    z.appendChild(d)});
+}
+function filterActive(f){return (f.k==='fecha'||f.k==='fing')?!!(f.from||f.to):!!f.sel}
+function filterText(f){
+  if(f.k==='per'&&!f.sel)return st.periods.length?st.periods.length+(st.periods.length===1?' período':' períodos'):'(Definir)';
+  if(f.k==='fecha'||f.k==='fing')return (f.from||f.to)?(f.from||'…')+' a '+(f.to||'…'):'(Todas)';
+  if(!f.sel)return '(Todos)';const v=[...f.sel].sort((a,b)=>a-b);
+  if((f.k==='anio'||f.k==='ying'||f.k==='yter')&&v.length>2&&v[v.length-1]-v[0]===v.length-1)return yearLabel(v[0])+' a '+yearLabel(v[v.length-1]);
+  if(v.length<=4)return v.map(x=>labelOf(f.k,x)).join(', ');return v.length+' seleccionados'}
+
+// ---------- menús y filtros ----------
+let openEl=null;
+function closePop(){if(openEl){openEl.remove();openEl=null}}
+document.addEventListener('mousedown',e=>{if(openEl&&!openEl.contains(e.target))closePop()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePop()});
+function positionAt(el,anchor){const r=anchor.getBoundingClientRect();document.body.appendChild(el);
+  const w=el.offsetWidth;let left=r.left+window.scrollX;if(left+w>window.scrollX+document.documentElement.clientWidth-8)left=window.scrollX+document.documentElement.clientWidth-w-8;
+  el.style.left=Math.max(8,left)+'px';el.style.top=(r.bottom+window.scrollY+4)+'px';openEl=el}
+function openMenu(k,anchor){closePop();const m=document.createElement('div');m.className='menu';m.setAttribute('role','menu');
+  const opts=k.startsWith('v:')?[['vals','Agregar a Valores']]:FL[k].filterOnly?[['filters','Agregar a Filtros']]:[['filters','Agregar a Filtros'],['rows','Agregar a Filas'],['cols','Agregar a Columnas'],['vals','Agregar a Valores (cuenta)']];
+  if(!k.startsWith('v:')&&zoneOf(k))opts.push(['remove','Quitar del cuadro']);
+  opts.forEach(([z,l])=>{const b=document.createElement('button');b.setAttribute('role','menuitem');b.textContent=l;b.onclick=()=>{closePop();z==='remove'?(removeField(k),renderAll()):place(k,z)};m.appendChild(b)});
+  positionAt(m,anchor);m.querySelector('button').focus()}
+function openPeriods(anchor){
+  closePop();const p=document.createElement('div');p.className='pop';p.style.width='min(520px,94vw)';p.setAttribute('role','dialog');p.setAttribute('aria-label','Definir períodos');
+  let P=st.periods.map(x=>({...x}));if(!P.length)P=[{name:'Período 1',from:'',to:''}];
+  const GOB=[{name:'Gobierno 2014–2018',from:'2014-03-11',to:'2018-03-10'},{name:'Gobierno 2018–2022',from:'2018-03-11',to:'2022-03-10'},{name:'Gobierno 2022–2026',from:'2022-03-11',to:'2026-03-10'},{name:'Gobierno 2026–2030',from:'2026-03-11',to:'2030-03-10'}];
+  const draw=()=>{p.innerHTML=`<h4>Períodos</h4><p class="minor" style="margin:0">Defina uno o más rangos de fechas; cada uno será una fila o columna de la tabla. Los registros fuera de los períodos no se cuentan.</p><div class="perlist"></div>
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap"><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="padd">+ Agregar período</button><button class="btn ghost" id="pgob">Períodos de gobierno</button></span><span style="display:flex;gap:8px"><button class="btn ghost" id="pc">Cancelar</button><button class="btn" id="po">Aceptar</button></span></div>`;
+    const L=p.querySelector('.perlist');
+    P.forEach((x,i)=>{const r=document.createElement('div');r.className='perrow';r.innerHTML=`<input type="text" aria-label="Nombre del período" value="${esc(x.name)}"><input type="date" aria-label="Desde" value="${x.from}"><input type="date" aria-label="Hasta" value="${x.to}"><button class="ibtn" aria-label="Quitar período">×</button>`;
+      const [n,f,t2,del]=r.children;n.oninput=()=>x.name=n.value;f.onchange=()=>x.from=f.value;t2.onchange=()=>x.to=t2.value;del.onclick=()=>{P.splice(i,1);draw()};L.appendChild(r)});
+    p.querySelector('#padd').onclick=()=>{P.push({name:'Período '+(P.length+1),from:'',to:''});draw()};
+    p.querySelector('#pgob').onclick=()=>{P=GOB.map(x=>({...x}));draw()};
+    p.querySelector('#pc').onclick=closePop;
+    p.querySelector('#po').onclick=()=>{const ok=P.filter(x=>x.from||x.to);if(!ok.length){toast('Defina al menos un período con fechas');return}
+      if(ok.some(x=>x.from&&x.to&&x.from>x.to)){toast('Hay un período con «desde» posterior a «hasta»');return}
+      st.periods=ok.map((x,i)=>({name:(x.name||'').trim()||'Período '+(i+1),from:x.from,to:x.to}));const so=selObj('per');if(so)so.sel=null;closePop();renderAll()};
+  };
+  draw();positionAt(p,anchor);
+}
+function openFilter(k,anchor){
+  if(k==='per'){openPeriods(anchor);return}
+  closePop();const f=selObj(k);if(!f)return;const p=document.createElement('div');p.className='pop';p.setAttribute('role','dialog');p.setAttribute('aria-label','Filtro '+FL[k].label);
+  if(k==='fecha'||k==='fing'){
+    p.innerHTML=`<h4>${k==='fing'?'Fecha de ingreso':'Fecha ('+esc(rep().fecha||'')+')'}</h4><label class="minor" style="padding:0;flex-direction:column;align-items:stretch">Desde<input type="date" id="pf" value="${f.from}"></label><label class="minor" style="padding:0;flex-direction:column;align-items:stretch">Hasta<input type="date" id="pt" value="${f.to}"></label><p class="minor" style="margin:0">Use el rango para filtrar por día, mes o año. Los registros sin fecha quedan fuera.</p><div class="row"><button class="btn ghost" id="pc">Limpiar</button><button class="btn" id="po">Aceptar</button></div>`;
+    positionAt(p,anchor);p.querySelector('#po').onclick=()=>{f.from=p.querySelector('#pf').value;f.to=p.querySelector('#pt').value;closePop();renderAll()};
+    p.querySelector('#pc').onclick=()=>{f.from='';f.to='';closePop();renderAll()};return}
+  const opts=optionsOf(k);const sel=new Set(f.sel||opts);
+  p.innerHTML=`<h4>${esc(FL[k].label)}</h4>${opts.length>14?'<input type="search" placeholder="Buscar" aria-label="Buscar">':''}<div class="list"></div><div class="row"><button class="btn ghost" id="pc">Cancelar</button><button class="btn" id="po">Aceptar</button></div>`;
+  const list=p.querySelector('.list');let q='';
+  const draw=()=>{list.innerHTML='';const all=document.createElement('label');const ca=document.createElement('input');ca.type='checkbox';ca.checked=opts.every(o=>sel.has(o));
+    ca.onchange=()=>{opts.forEach(o=>ca.checked?sel.add(o):sel.delete(o));draw()};all.append(ca,document.createTextNode('(Seleccionar todo)'));list.appendChild(all);
+    opts.forEach(o=>{const lb=labelOf(k,o);if(q&&!lb.toLowerCase().includes(q))return;const l=document.createElement('label');const c=document.createElement('input');c.type='checkbox';c.checked=sel.has(o);
+      c.onchange=()=>{c.checked?sel.add(o):sel.delete(o);ca.checked=opts.every(x=>sel.has(x))};l.append(c,document.createTextNode(lb));list.appendChild(l)})};
+  draw();const qs=p.querySelector('input[type=search]');if(qs)qs.oninput=()=>{q=qs.value.toLowerCase();draw()};
+  positionAt(p,anchor);
+  p.querySelector('#pc').onclick=closePop;
+  p.querySelector('#po').onclick=()=>{if(!sel.size){toast('Seleccione al menos un valor');return}f.sel=opts.every(o=>sel.has(o))?null:sel;closePop();renderAll()};
+}
+
+// ---------- cálculo ----------
+function compute(rd,cd){
+  const segs=segsOf(fam());const fy=st.filters.find(f=>f.k==='anio')||st.itemSel.anio;
+  const useSegs=segs.filter(s=>!fy||!fy.sel||fy.sel.has(s.y));
+  const fd=st.filters.find(f=>f.k==='fecha');
+  const from=fd&&fd.from?Math.round((Date.parse(fd.from)-D0)/DAY):null,to=fd&&fd.to?Math.round((Date.parse(fd.to)-D0)/DAY):null;
+  const fl=st.filters.filter(f=>f.sel&&f.k!=='anio'&&f.k!=='fecha'&&f.k!=='fing'&&allowed(f.k)).concat(Object.values(st.itemSel).filter(f=>f.sel&&f.k!=='anio'&&allowed(f.k)&&(st.rows.includes(f.k)||st.cols.includes(f.k))));
+  const rows=(rd||st.rows).filter(allowed),cols=(cd||st.cols).filter(allowed);const isT=!!rep().tiempo;const UMAX=4294967295;
+  const V=st.vals.map(v=>({f:v.f,keep:v.agg==='med'}));const nV=V.length;
+  const getV=(f,i,s)=>{switch(f){case 'exp':return 1;case 'meses':{const m=D.mes[i];return m===65535?null:m/10}
+    case 'costo':return D.costo[i]===UMAX?null:D.costo[i];case 'pagar':return D.pagar[i]===UMAX?null:D.pagar[i];
+    case 'subs':{const c=D.costo[i],p=D.pagar[i];return (c===UMAX||p===UMAX)?null:Math.max(0,c-p)}case 'subp':return D.subp[i]===255?null:D.subp[i];
+    default:return keyOf(f,i,s)===0?null:1}};
+  const fi2=st.filters.find(f=>f.k==='fing'&&(f.from||f.to)&&allowed('fing'));const f2a=fi2&&fi2.from?dnum(fi2.from):null,f2b=fi2&&fi2.to?dnum(fi2.to):null;
+  const smask=(fam()==='SISTRED'&&SMASK)?SMASK:null;
+  prepPeriods();const perUsed=rows.includes('per')||cols.includes('per')||st.vals.some(v=>v.f==='per');
+  const cells=new Map(),rk=new Map(),ck=new Map();const det=[];let total=0;const usedY=new Set();
+  for(const s of useSegs){const end=s.o+s.n;
+    if(s.nodate&&(from!==null||to!==null)){if((to!==null&&dnum(s.y+'-01-01')>to)||(from!==null&&dnum(s.y+'-12-31')<from))continue}
+    outer:for(let i=s.o;i<end;i++){
+      if(smask&&!smask[i-s.o])continue;
+      if(fi2){const d2=D.date2[i];if(!d2)continue;if(f2a!==null&&d2<f2a)continue;if(f2b!==null&&d2>f2b)continue}
+      if(perUsed&&keyOf('per',i,s)===0)continue;
+      if(!s.nodate&&(from!==null||to!==null)){const d=D.date[i];if(!d){if(!(D.b2[i]&64))continue;if((to!==null&&dnum(s.y+'-01-01')>to)||(from!==null&&dnum(s.y+'-12-31')<from))continue}else{if(from!==null&&d<from)continue;if(to!==null&&d>to)continue}}
+      for(const f of fl){if(!f.sel.has(keyOf(f.k,i,s)))continue outer}
+      const r=rows.map(k=>keyOf(k,i,s)),c=cols.map(k=>keyOf(k,i,s));const rs=r.join('|'),cs=c.join('|');
+      if(!rk.has(rs))rk.set(rs,r);if(!ck.has(cs))ck.set(cs,c);
+      const key=rs+'#'+cs;let x=cells.get(key);if(!x){x={n:0,ys:new Set(),a:V.map(v=>({nv:0,sum:0,min:Infinity,max:-Infinity,v:v.keep?[]:null}))};cells.set(key,x)}
+      x.n++;x.ys.add(s.y);
+      for(let j=0;j<nV;j++){const v=getV(V[j].f,i,s);if(v==null)continue;const a=x.a[j];a.nv++;a.sum+=v;if(a.v)a.v.push(v);if(v<a.min)a.min=v;if(v>a.max)a.max=v}
+      total++;det.push(i);usedY.add(s.y)}}
+  const sortT=(keys,dims)=>keys.sort((a,b)=>{for(let j=0;j<dims.length;j++){const c=cmpKeys(dims[j])(a[1][j],b[1][j]);if(c)return c}return 0});
+  const R=sortT([...rk.entries()],rows),C=sortT([...ck.entries()],cols);
+  return {cells,R,C,rows,cols,total,det,segs:useSegs,usedY,isT,from,to};
+}
+function monthsIn(y){const s=Date.UTC(y,0,1),e=y===2026?Date.UTC(2026,9,31):Date.UTC(y,11,31);let a=s,b=e;
+  if(RES_RANGE.from!==null)a=Math.max(a,D0+RES_RANGE.from*DAY);if(RES_RANGE.to!==null)b=Math.min(b,D0+RES_RANGE.to*DAY);if(b<a)return 0;
+  const da=new Date(a),db=new Date(b);return (db.getUTCFullYear()-da.getUTCFullYear())*12+db.getUTCMonth()-da.getUTCMonth()+1}
+let RES_RANGE={from:null,to:null},SCOPE=[],DIMS_USED=[];
+function agg(c,vi){if(!c)return null;const sp=st.vals[vi],a=c.a[vi];
+  switch(sp.agg){case 'count':return sp.f==='exp'?c.n:a.nv;case 'sum':return sp.f==='exp'?c.n:(a.nv?a.sum:null);case 'avg':return a.nv?a.sum/a.nv:null;
+  case 'min':return a.nv?a.min:null;case 'max':return a.nv?a.max:null;
+  case 'med':{if(!a.v||!a.v.length)return null;const q=a.v.slice().sort((x,y)=>x-y),m=q.length>>1;return q.length%2?q[m]:(q[m-1]+q[m])/2}
+  case 'yavg':{const ys=DIMS_USED.includes('anio')?[...c.ys]:SCOPE;return ys.length?c.n/ys.length:null}
+  case 'mavg':{const ys=DIMS_USED.includes('anio')?[...c.ys]:SCOPE;const den=DIMS_USED.includes('mes')?ys.length:ys.reduce((q,y)=>q+monthsIn(y),0);return den?c.n/den:null}}}
+function merge(list){if(!list.some(Boolean))return null;const o={n:0,ys:new Set(),a:st.vals.map(v=>({nv:0,sum:0,min:Infinity,max:-Infinity,v:v.agg==='med'?[]:null}))};
+  for(const c of list){if(!c)continue;o.n+=c.n;c.ys.forEach(y=>o.ys.add(y));c.a.forEach((a,j)=>{const b=o.a[j];b.nv+=a.nv;b.sum+=a.sum;b.min=Math.min(b.min,a.min);b.max=Math.max(b.max,a.max);if(b.v&&a.v)b.v.push(...a.v)})}return o}
+
+let RES=null,TABLE=null,chart=null;
+function sortRows(T){if(st.tbl.sort==='label'||!T.nlab||!T.rows.length)return;const n=T.nlab,nd=T.head.length-n;const idx=n+(T.nTot?nd-T.nTot:0);const d=st.tbl.sort==='desc'?-1:1;
+  T.rows.sort((a,b)=>{const x=a[idx],y=b[idx];if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return d*(x-y)})}
+function build(){fixVals();const T=buildTable(st.rows,st.cols);sortRows(T);TABLE=T;RES=T.X;TABLE.title=autoTitle()}
+function buildTable(rd,cd){
+  const X=compute(rd,cd);const r=rep();const isT=X.isT;RES_RANGE={from:X.from,to:X.to};SCOPE=[...new Set(X.segs.map(s=>s.y))];DIMS_USED=X.rows.concat(X.cols);
+  const nV=st.vals.length;const VI=[...Array(nV).keys()];
+  const grid=X.R.map(([rs])=>X.C.map(([cs])=>X.cells.get(rs+'#'+cs)));
+  const rowTot=grid.map(row=>merge(row)),colTot=X.C.map((_,j)=>merge(grid.map(row=>row[j]))),grand=merge(rowTot);
+  const RT=st.tbl.rowTot&&X.cols.length>0&&!(r.stock&&X.cols.includes('anio')),FT=st.tbl.colTot&&X.rows.length>0&&!(r.stock&&X.rows.includes('anio'));
+  const isPct=vi=>['count','sum'].includes(st.vals[vi].agg)&&st.vals[vi].show!=='none';
+  const pv=(c,rc,cc,vi)=>{const v=agg(c,vi);if(v==null)return null;if(!isPct(vi))return v;const sh=st.vals[vi].show;
+    const d=sh==='tot'?agg(grand,vi):sh==='row'?agg(rc,vi):agg(cc,vi);return d?100*v/d:null};
+  const valNames=VI.map(vi=>valueName(vi));
+  const head=X.rows.map(k=>FL[k].label),colVal=[],colKey=[];
+  X.C.forEach(([,c])=>{const cl=c.map((v,j)=>labelOf(X.cols[j],v)).join(' / ');VI.forEach(vi=>{head.push(X.cols.length?(nV>1?cl+' / '+valNames[vi]:cl):valNames[vi]);colVal.push(vi);colKey.push(cl)})});
+  if(RT)VI.forEach(vi=>{head.push(nV>1?'Total '+valNames[vi]:'Total');colVal.push(vi);colKey.push('Total')});
+  const rows=X.R.map(([,rv],i)=>{const out=rv.map((v,j)=>labelOf(X.rows[j],v));grid[i].forEach((c,j)=>VI.forEach(vi=>out.push(pv(c,rowTot[i],colTot[j],vi))));if(RT)VI.forEach(vi=>out.push(pv(rowTot[i],rowTot[i],grand,vi)));return out});
+  let foot=null;if(FT){foot=['Total'].concat(X.rows.slice(1).map(()=>''));colTot.forEach(c=>VI.forEach(vi=>foot.push(pv(c,grand,c,vi))));if(RT)VI.forEach(vi=>foot.push(pv(grand,grand,grand,vi)))}
+  const nTot=RT?nV:0;
+  return {head,rows,foot,nlab:X.rows.length,isT,valNames,valName:valNames.length>1?valNames.slice(0,-1).map((s,i)=>i?s[0].toLowerCase()+s.slice(1):s).join(', ')+' y '+valNames[valNames.length-1][0].toLowerCase()+valNames[valNames.length-1].slice(1):(valNames[0]||'Expedientes'),colVal,colKey,nTot,nV,pcts:VI.map(isPct),grand:VI.map(vi=>agg(grand,vi)),RT,X};
+}
+function valueName(vi){const v=st.vals[vi];const lab=vLabel(v.f);let s;
+  if(v.f==='exp')s=v.agg==='count'?'Expedientes':v.agg==='sum'?'Suma de expedientes':'Expedientes ('+AGGL[v.agg].toLowerCase()+')';
+  else if(!NUMF[v.f])s='Cuenta de '+lab.toLowerCase();
+  else s=AGGL[v.agg]+' de '+(lab.endsWith(' ($)')?lab.slice(0,-4).toLowerCase()+' ($)':lab.toLowerCase());
+  return s+(['count','sum'].includes(v.agg)&&v.show!=='none'?' (%)':'')}
+const FMTD={};function fd(){const d=st.tbl.dec==='auto'?1:+st.tbl.dec;return FMTD[d]||(FMTD[d]=new Intl.NumberFormat('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d}))}
+function fmtv(v,vi){if(v==null)return '';vi=vi||0;const fmt1=fd();const sp=st.vals[vi];if(!sp)return fmt.format(v);
+  if(['count','sum'].includes(sp.agg)&&sp.show!=='none')return fmt1.format(v)+'%';
+  if(sp.agg==='count'||(sp.agg==='sum'&&!NUMF[sp.f]?.money&&sp.f!=='meses'))return fmt.format(Math.round(v));
+  if(NUMF[sp.f]&&NUMF[sp.f].money)return '$'+fmt.format(Math.round(v));
+  if(sp.f==='subp')return fmt1.format(v)+'%';return fmt1.format(v)}
+function autoTitle(){const r=rep();const by=RES_DIMS();const f=activeSels().map(f=>FL[f.k].label+': '+filterText(f));
+  return r.name+'. '+TABLE.valName+(fam()==='SISTRED'&&st.q?' (búsqueda: «'+st.q+'»)':'')+(by.length?' por '+(by.length>1?by.slice(0,-1).map(k=>FL[k].label.toLowerCase()).join(', ')+' y '+FL[by[by.length-1]].label.toLowerCase():FL[by[0]].label.toLowerCase()):'')+(f.length?'. '+f.join('; '):'')}
+function RES_DIMS(){return RES.rows.concat(RES.cols)}
+function autoNotes(){const X=RES;if(!X)return [];const n=[];if(fam()==='SISTRED')n.push('Los casos SISTRED corresponden solo a saneamientos (en proceso y finalizados); los casos MGT son finalizados de todos los trámites y no registran comuna, sexo, tipo de inmueble, origen de la posesión ni representante. Los registros MGT sin fecha de término se muestran como «Sin fecha de término».');const fd=st.filters.find(f=>f.k==='fecha');const dateUse=(fd&&(fd.from||fd.to))||RES_DIMS().some(k=>k==='per'||k==='mes')||st.filters.some(f=>f.k==='per');
+  const nod=X.segs.filter(s=>s.nodate&&X.usedY.has(s.y)).map(s=>s.y);
+  const nodRec=X.segs.some(s=>s.histadd&&X.usedY.has(s.y));
+  if(nod.length&&dateUse)n.push((fam()==='TITULOS_ENTREGADOS'?'Títulos entregados ':'Los registros de ')+nod.map(yearLabel).join(' y ')+': en ese período no se registraba la fecha de entrega, por lo que se contabilizan completos dentro de su año y no es posible filtrarlos por fecha'+(RES_DIMS().includes('per')?'; en «Período» se asignan al período que abarca la mayor parte del año':'')+'.');
+  const ha=X.segs.filter(s=>s.histadd&&X.usedY.has(s.y));if(ha.length)n.push(ha.map(s=>'Títulos entregados '+yearLabel(s.y)+': '+fmt.format(s.histadd)+' títulos del histórico por trámite no figuran en el panel de títulos del año, por lo que no tienen fecha de entrega ni caracterización (sin información)').join('. ')+'.');
+  const nf=X.segs.filter(s=>s.nofolio&&X.usedY.has(s.y));if(nf.length)n.push(nf.map(s=>yearLabel(s.y)+': '+fmt.format(s.nofolio)+' registro sin número de folio, con campos sin información').join('; ')+'.');
+  const adj=X.segs.filter(s=>(s.adj||s.adjr)&&X.usedY.has(s.y));if(adj.length)n.push('Títulos entregados '+adj.map(s=>yearLabel(s.y)).join(' y ')+': se usan las cifras informadas por región; '+adj.map(s=>yearLabel(s.y)+': '+fmt.format(s.adj)+' registros sin detalle'+(s.adjr?' y '+fmt.format(s.adjr)+' descontados':'')).join('; ')+'.');
+  if(RES_DIMS().includes('per')||st.filters.some(f=>f.k==='per'))n.push('Períodos: '+st.periods.map(p=>p.name+' ('+(p.from||'…')+' a '+(p.to||'…')+')').join('; ')+'.');
+  return n}
+function allNotes(){return [st.note.trim()].filter(Boolean).concat(autoNotes())}
+function currentTitle(){return (st.title||'').trim()||TABLE.title}
+
+// ---------- render ----------
+function renderSummary(){
+  const s=$('#sum');$('#desc').textContent=rep().desc||'';const act=$('#act');act.innerHTML='';
+  if(st.rep!=='otro')activeSels().forEach(f=>{const x=document.createElement('span');x.textContent=FL[f.k].label+': '+filterText(f);act.appendChild(x)});
+  if(st.rep==='otro'){s.innerHTML='<span class="what">Registre un requerimiento especial y elija el reporte base.</span>';return}
+  const r=rep(),X=RES;const years=[...new Set(X.segs.map(s=>s.y))].sort();
+  let big,what;
+  const v0=st.vals[0];
+  if(!v0){big=fmt.format(X.total);what='expedientes (agregue un campo a Valores)'}
+  else if(!(v0.f==='exp'&&v0.agg==='count')){const sh=v0.show;v0.show='none';const g=TABLE.grand[0];big=g==null?'—':fmtv(g,0)+(v0.f==='meses'&&v0.agg!=='count'?' meses':'');what=valueName(0).toLowerCase().replace(' ($)','')+(v0.agg==='avg'&&NUMF[v0.f]&&NUMF[v0.f].money?' por expediente':'')+', sobre '+fmt.format(X.total)+' expedientes';v0.show=sh}
+  else if(r.stock&&years.length>1){const ly=years[years.length-1];const sg=X.segs.find(s=>s.y===ly);big=fmt.format(X.det.filter(i=>i>=sg.o&&i<sg.o+sg.n).length);what='expedientes al corte de '+yearLabel(ly)}
+  else{big=fmt.format(X.total);what='expedientes'}
+  s.innerHTML=`<span class="big">${big}</span><span class="what">${what} · ${fam()==='SISTRED'?'SISTRED al 02-11-2026; MGT al 01-11-2026':years.length?(years.length>2?yearLabel(years[0])+' a '+yearLabel(years[years.length-1]):years.map(yearLabel).join(' y ')):'ningún año'}</span>`;
+}
+function renderResult(){
+  const box=$('#result');box.innerHTML='';
+  if(st.rep==='otro'){box.appendChild(otroPanel());renderSummary();return}
+  build();renderSummary();
+  const bar=document.createElement('div');bar.className='resbar';
+  bar.innerHTML=`<div class="tabs" role="tablist"><button role="tab" aria-selected="${st.view==='tabla'}" data-v="tabla">Tabla</button><button role="tab" aria-selected="${st.view==='grafico'}" data-v="grafico">Gráfico</button></div>
+   <div class="actions"><button class="btn" id="dt">Descargar tabla (Excel)</button><button class="btn ghost" id="dtp">Descargar tabla (PNG)</button><button class="btn ghost" id="dd">Descargar detalle (Excel)</button><button class="btn ghost" id="dg">Descargar gráfico (PNG)</button></div>`;
+  if(fam()==='SISTRED')box.appendChild(searchBar());
+  box.appendChild(bar);
+  const ob=document.createElement('div');ob.className='optbar';
+  [['tabla','Opciones de tabla'],['grafico','Opciones de gráfico'],['texto','Opciones de texto']].forEach(([k,l])=>{const b=document.createElement('button');b.className='optbtn';b.innerHTML=l+' <span aria-hidden="true">'+(st.opt===k?'▴':'▾')+'</span>';b.setAttribute('aria-expanded',st.opt===k);b.setAttribute('aria-controls','optpanel');
+    b.onclick=()=>{st.opt=st.opt===k?null:k;if(st.opt==='grafico')st.view='grafico';if(st.opt==='tabla')st.view='tabla';renderResult()};ob.appendChild(b)});
+  box.appendChild(ob);if(st.opt)box.appendChild(optPanel(st.opt));
+  const th=document.createElement('div');th.className='restitle';th.innerHTML='<h3 id="restitle"></h3><p id="resnote" class="minor"></p>';th.querySelector('#restitle').textContent=currentTitle();const rn=th.querySelector('#resnote');rn.textContent=allNotes().join(' ');rn.hidden=!allNotes().length;box.appendChild(th);
+  const tl=document.createElement('div');tl.className='titlebar';tl.hidden=true;
+  tl.innerHTML=`<label class="minor" for="ttl">Título (se incluye en las descargas)</label><input id="ttl" type="text">${st.title?'<button class="linkbtn" id="ttlr">Usar título automático</button>':''}`;
+  const ti=tl.querySelector('#ttl');ti.value=currentTitle();ti.oninput=()=>{st.title=ti.value;if(!tl.querySelector('#ttlr')){const b=document.createElement('button');b.className='linkbtn';b.id='ttlr';b.textContent='Usar título automático';b.onclick=()=>{st.title='';renderResult()};tl.appendChild(b)}};
+  const rb=tl.querySelector('#ttlr');if(rb)rb.onclick=()=>{st.title='';renderResult()};box.appendChild(tl);
+  bar.querySelectorAll('[role=tab]').forEach(b=>b.onclick=()=>{st.view=b.dataset.v;renderResult()});
+  bar.querySelector('#dt').onclick=exportTable;bar.querySelector('#dtp').onclick=exportTablePng;bar.querySelector('#dd').onclick=exportDetail;bar.querySelector('#dg').onclick=exportPng;
+  const w=document.createElement('div');w.className='warn';w.textContent=warnings().join(' ');box.appendChild(w);
+  if(!TABLE.rows.length){box.insertAdjacentHTML('beforeend','<p class="status">Ningún expediente cumple con los filtros. Amplíe el rango de fechas o quite algún filtro.</p>');box.appendChild(notes());return}
+  if(st.view==='tabla')box.appendChild(tableEl());else box.appendChild(chartEl());
+  if(fam()==='SISTRED'&&st.q)box.appendChild(casesList());
+  box.appendChild(notes());
+}
+function tableEl(){
+  const t=TABLE,n=t.nlab;const tb=document.createElement('div');tb.className='tablebox';tb.style.fontSize={s:'12px',m:'14px',l:'16px'}[st.tbl.size];tb.tabIndex=0;tb.setAttribute('aria-label','Tabla de resultados');
+  const ndata=t.head.length-n,firstTot=ndata-t.nTot;const max={};
+  t.rows.forEach(r=>r.slice(n).forEach((v,j)=>{if(j>=firstTot||v==null)return;const vi=t.colVal[j];if(!(max[vi]>=v))max[vi]=v}));
+  let h='<table><thead><tr>'+t.head.map((x,j)=>`<th scope="col" class="${j<n?'l':''}${j-n>=firstTot?' total':''}">${esc(x)}</th>`).join('')+'</tr></thead><tbody>';
+  t.rows.forEach((r,i)=>{h+='<tr>';r.forEach((v,j)=>{
+    if(j<n){const same=i>0&&j<n-1&&t.rows[i-1].slice(0,j+1).every((x,q)=>x===r[q]);h+=`<th scope="row" class="l">${same?'':esc(v)}</th>`;return}
+    const jj=j-n,vi=t.colVal[jj],isTot=jj>=firstTot;const mx=max[vi];const al=(st.tbl.heat&&!isTot&&v!=null&&mx>0&&!t.pcts[vi]&&v>=0)?(0.07+0.5*v/mx).toFixed(3):0;
+    h+=`<td class="${isTot?'total':''}"${al?` style="background:rgba(var(--heat),${al})"`:''}>${fmtv(v,vi)}</td>`});h+='</tr>'});
+  h+='</tbody>';if(t.foot)h+='<tfoot><tr>'+t.foot.map((v,j)=>j<n?`<th class="l" scope="row">${esc(v)}</th>`:`<td>${fmtv(v,t.colVal[j-n])}</td>`).join('')+'</tr></tfoot>';h+='</table>';
+  tb.innerHTML=h;return tb;
+}
+function wrapText(s,n){const w=s.split(' '),out=[];let l='';w.forEach(x=>{if((l+' '+x).trim().length>n){out.push(l.trim());l=x}else l+=' '+x});if(l.trim())out.push(l.trim());return out}
+const valuePlugin={id:'vals',afterDatasetsDraw(c,_,o){if(!o||!o.on)return;const x=c.ctx;x.save();x.font=`600 ${o.size}px "Public Sans",system-ui,sans-serif`;
+  const stacked=c.config.type==='bar'&&c.options.scales.x.stacked;const tops={};
+  c.data.datasets.forEach((ds,di)=>{const m=c.getDatasetMeta(di);if(m.hidden)return;m.data.forEach((el,i)=>{const v=ds.data[i];if(v==null||v===0)return;const txt=o.fmt(v,ds.vi);const tw=x.measureText(txt).width;
+    if(c.options.indexAxis==='y'){if(el.height<7)return;x.fillStyle=o.color;x.textAlign='left';x.textBaseline='middle';x.fillText(txt,el.x+4,el.y);return}
+    if(c.config.type==='bar'){
+      if(stacked){tops[i]=Math.min(tops[i]??Infinity,el.y);const h=Math.abs(el.base-el.y);if(h<o.size+4||tw>el.width-2)return;x.fillStyle='#FFFFFF';x.textAlign='center';x.textBaseline='middle';x.fillText(txt,el.x,(el.y+el.base)/2);return}
+      x.fillStyle=o.color;if(tw>el.width+4){x.save();x.translate(el.x,el.y-4);x.rotate(-Math.PI/2);x.textAlign='left';x.textBaseline='middle';x.fillText(txt,0,0);x.restore()}
+      else{x.textAlign='center';x.textBaseline='bottom';x.fillText(txt,el.x,el.y-3)}}
+    else{x.fillStyle=o.color;x.textAlign='center';x.textBaseline='bottom';x.fillText(txt,el.x,el.y-6)}})});
+  if(stacked&&o.totals){x.fillStyle=o.color;x.textAlign='center';x.textBaseline='bottom';c.data.labels.forEach((_,i)=>{if(tops[i]==null)return;const tot=c.data.datasets.reduce((a,ds,di)=>a+(c.getDatasetMeta(di).hidden?0:(ds.data[i]||0)),0);
+    const el=c.getDatasetMeta(0).data[i];const txt=o.fmt(tot,c.data.datasets[0].vi);if(x.measureText(txt).width>el.width+8)return;x.fillText(txt,el.x,tops[i]-3)})}
+  x.restore()}};
+const PAL=['#2E6B5E','#B98B2E','#4E79A7','#C0504D','#7A6AA8','#5B9A8B','#D17A3A','#8C8C3E','#A0527A','#3F8FBF','#6B8E23','#B07AA1','#2F4B7C','#E0A458','#7F9C96','#9C6644'];
+function chartDims(){const ok=k=>k&&allowed(k)&&!FL[k].filterOnly;
+  let ax=st.chartAxis==='__none'?null:st.chartAxis&&ok(st.chartAxis)?st.chartAxis:(st.rows.filter(ok)[0]||st.cols.filter(ok)[0]||null);
+  let se=st.chartSeries===null?(st.rows.filter(ok)[0]===ax?st.cols.filter(ok)[0]||'':st.cols.filter(ok).find(k=>k!==ax)||''):st.chartSeries;
+  if(se&&(!ok(se)||se===ax))se='';return {ax,se}}
+function chartTable(){const {ax,se}=chartDims();const CT=buildTable(ax?[ax]:[],se?[se]:[]);sortRows(CT);CT.ax=ax;CT.se=se;DIMS_USED=RES.rows.concat(RES.cols);return CT}
+function chartConfig(forExport,CT){
+  const t=CT,n=t.nlab;const MAXR=forExport?60:40;
+  const rows=t.rows.slice(0,MAXR);const labels=rows.map(r=>n?r.slice(0,n).join(' / '):'Total');
+  const cv=Math.min(st.chartVal,Math.max(0,t.nV-1));const idx=[];t.colVal.forEach((vi,j)=>{if(vi===cv&&j<t.colVal.length-t.nTot)idx.push(j)});const ncol=idx.length;const horiz=st.chart==='barh',stacked=st.chart==='stack';
+  const ds=idx.map((j,q)=>{const lab=t.X.cols.length?t.colKey[j]:t.valNames[cv];const col=st.colors[lab]||PAL[q%PAL.length];return {label:lab,vi:cv,data:rows.map(r=>r[n+j]),backgroundColor:col,borderColor:col,borderWidth:0}});
+  const ink=forExport?'#1E2A2F':css('--ink'),line=forExport?'#D5DCD7':css('--line');
+  const FS={s:10,m:12,l:15}[st.copt.size]+(forExport?2:0);
+  const additive=t.nV>0&&['count','sum'].includes(st.vals[cv].agg)&&!t.pcts[cv];
+  const cat={stacked,ticks:{color:ink,autoSkip:!forExport&&!horiz,maxRotation:60,font:{size:FS}},grid:{color:line,display:!horiz}};
+  const val={stacked,ticks:{color:ink,callback:v=>fmtv(v,cv),font:{size:FS}},grid:{color:line},beginAtZero:true,grace:'14%'};
+  return {type:'bar',data:{labels,datasets:ds},
+    options:{indexAxis:horiz?'y':'x',responsive:!forExport,maintainAspectRatio:false,animation:false,devicePixelRatio:forExport?1:undefined,layout:{padding:{top:forExport?10:4,right:horiz?40:12,left:4}},
+      plugins:{legend:{display:ncol>1&&st.copt.legend,labels:{color:ink,font:{size:FS}}},title:{display:!!forExport,text:wrapText(currentTitle(),110),color:ink,font:{size:FS+6,weight:'600'},padding:{bottom:14}},
+        subtitle:{display:!!forExport,text:allNotes().flatMap(x=>wrapText(x,150)).concat(['Fuente: DCPR, Ministerio de Bienes Nacionales. Paneles '+SCOPE.map(yearLabel).join(', ')+'.']),color:'#5A6A6E',font:{size:12},position:'bottom',padding:{top:10}},
+        vals:{on:st.copt.labels,size:FS,color:ink,fmt:fmtv,totals:additive&&stacked}},
+      scales:horiz?{y:cat,x:val}:{x:cat,y:val}},
+    plugins:[valuePlugin].concat(forExport?[{id:'bg',beforeDraw:c=>{const x=c.ctx;x.save();x.fillStyle='#FFFFFF';x.fillRect(0,0,c.width,c.height);x.restore()}}]:[]),
+    _more:t.rows.length>MAXR?t.rows.length:0,_max:MAXR,_n:rows.length,_series:ds.map(d=>d.label)};
+}
+function chartEl(){
+  const w=document.createElement('div');const CT=chartTable();const cfg=chartConfig(false,CT);
+  const wrap=document.createElement('div');wrap.className='chartwrap';if(st.chart==='barh')wrap.style.height=Math.max(360,cfg._n*(cfg._series.length>1?18*cfg._series.length:26)+90)+'px';
+  const cv=document.createElement('canvas');cv.setAttribute('role','img');cv.setAttribute('aria-label','Gráfico del resultado');wrap.appendChild(cv);w.appendChild(wrap);
+  const note=document.createElement('p');note.className='minor';w.appendChild(note);
+  if(chart){chart.destroy();chart=null}
+  if(typeof Chart==='undefined'){note.textContent='No se pudo cargar la librería de gráficos (requiere conexión a internet).';return w}
+  if(cfg._more)note.textContent=`El gráfico muestra las primeras ${cfg._max} categorías de ${cfg._more}; la tabla y las descargas incluyen todas.`;
+  requestAnimationFrame(()=>{chart=new Chart(cv,cfg)});return w;
+}
+function optPanel(k){
+  const p=document.createElement('div');p.className='optpanel';p.id='optpanel';
+  const sel=(label,id,opts,cur)=>`<label>${label}<select id="${id}">${opts.map(([v,l])=>`<option value="${v}"${String(v)===String(cur)?' selected':''}>${l}</option>`).join('')}</select></label>`;
+  const chk=(label,id,on)=>`<label class="chk"><input type="checkbox" id="${id}"${on?' checked':''}>${label}</label>`;
+  if(k==='tabla'){
+    p.innerHTML=`<div class="optgrid">${chk('Columna «Total» (total de cada fila)','o_rt',st.tbl.rowTot)}${chk('Fila «Total» (total de cada columna)','o_ft',st.tbl.colTot)}${chk('Mapa de calor en las celdas','o_heat',st.tbl.heat)}
+      ${sel('Decimales','o_dec',[['auto','Automático'],[0,'0'],[1,'1'],[2,'2']],st.tbl.dec)}${sel('Ordenar filas','o_sort',[['label','Por nombre'],['desc','De mayor a menor'],['asc','De menor a mayor']],st.tbl.sort)}${sel('Tamaño de letra','o_size',[['s','Pequeño'],['m','Normal'],['l','Grande']],st.tbl.size)}</div>`;
+    const on=(id,f)=>p.querySelector(id).onchange=e=>{f(e.target);renderResult()};
+    on('#o_rt',e=>st.tbl.rowTot=e.checked);on('#o_ft',e=>st.tbl.colTot=e.checked);on('#o_heat',e=>st.tbl.heat=e.checked);
+    on('#o_dec',e=>st.tbl.dec=e.value);on('#o_sort',e=>st.tbl.sort=e.value);on('#o_size',e=>st.tbl.size=e.value);
+  }
+  if(k==='grafico'){
+    const CT=chartTable();const cfg=chartConfig(false,CT);
+    const dims=[['','Ninguna']].concat(FIELDS.filter(f=>allowed(f.k)&&!f.filterOnly).map(f=>[f.k,f.label]));
+    p.innerHTML=`<div class="optgrid">${sel('Tipo','o_type',[['col','Columnas'],['stack','Columnas apiladas'],['barh','Barras (horizontal)']],st.chart)}
+      ${sel('Eje','o_ax',dims,CT.ax||'')}${sel('Series','o_se',dims,CT.se||'')}${CT.nV>1?sel('Valor','o_val',CT.valNames.map((v,i)=>[i,v]),st.chartVal):''}
+      ${chk('Mostrar valores','o_lab',st.copt.labels)}${chk('Mostrar leyenda','o_leg',st.copt.legend)}</div>
+      <div class="optsub">Colores</div><div class="swatches"></div><button class="linkbtn" id="crst">Restablecer colores</button>`;
+    const on=(id,f)=>{const el=p.querySelector(id);if(el)el.onchange=e=>{f(e.target);renderResult()}};
+    on('#o_type',e=>st.chart=e.value);on('#o_ax',e=>st.chartAxis=e.value||'__none');on('#o_se',e=>st.chartSeries=e.value);on('#o_val',e=>st.chartVal=+e.value);
+    on('#o_lab',e=>st.copt.labels=e.checked);on('#o_leg',e=>st.copt.legend=e.checked);
+    const sw=p.querySelector('.swatches');cfg._series.forEach((lab,j)=>{const l=document.createElement('label');const i=document.createElement('input');i.type='color';i.value=st.colors[lab]||PAL[j%PAL.length];
+      i.onchange=()=>{st.colors[lab]=i.value;renderResult()};l.append(i,document.createTextNode(lab));sw.appendChild(l)});
+    p.querySelector('#crst').onclick=()=>{cfg._series.forEach(l=>delete st.colors[l]);renderResult()};
+  }
+  if(k==='texto'){
+    p.innerHTML=`<div class="optcol"><label>Título (se incluye en las descargas)<input type="text" id="o_tt"></label>
+      <button class="linkbtn" id="o_ttr"${st.title?'':' hidden'}>Usar título automático</button>
+      <label>Nota al pie (se incluye en la tabla Excel y en el PNG)<textarea id="o_note" rows="2" placeholder="Ej.: Cifras preliminares; incluye solo expedientes SISTRED."></textarea></label>
+      ${sel('Tamaño del texto en el gráfico','o_fs',[['s','Pequeño'],['m','Normal'],['l','Grande']],st.copt.size)}</div>`;
+    const tt=p.querySelector('#o_tt');tt.value=currentTitle();tt.oninput=()=>{st.title=tt.value;p.querySelector('#o_ttr').hidden=!st.title;const h=$('#restitle');if(h)h.textContent=currentTitle()};
+    p.querySelector('#o_ttr').onclick=()=>{st.title='';renderResult()};
+    const nt=p.querySelector('#o_note');nt.value=st.note;nt.oninput=()=>{st.note=nt.value;const e=$('#resnote');if(e){e.textContent=allNotes().join(' ');e.hidden=!allNotes().length}};
+    p.querySelector('#o_fs').onchange=e=>{st.copt.size=e.target.value;renderResult()};
+  }
+  return p;
+}
+function warnings(){
+  const r=rep(),X=RES,m=[];const years=[...new Set(X.segs.map(s=>s.y))];
+  if(r.stock&&years.length>1&&!X.rows.includes('anio')&&!X.cols.includes('anio'))m.push('Este reporte es un stock a la fecha de corte de cada panel. Con varios años, ubique «Año» en Filas o Columnas, o filtre un solo año, para no sumar cortes distintos.');
+  st.filters.forEach(f=>{if(f.sel&&MISS[f.k]){const bad=X.segs.filter(s=>s.miss[f.k]>=20).map(s=>yearLabel(s.y)+' ('+s.miss[f.k]+'% sin dato)');if(bad.length)m.push('El filtro «'+FL[f.k].label+'» deja fuera registros sin información en: '+bad.join(', ')+'.')}});
+  X.rows.concat(X.cols).forEach(k=>{if(MISS[k]){const bad=X.segs.filter(s=>s.miss[k]>=20).map(s=>yearLabel(s.y));if(bad.length)m.push('«'+FL[k].label+'» tiene alta proporción de «Sin información» en: '+bad.join(', ')+'.')}});
+  const fd=st.filters.find(f=>f.k==='fecha');
+
+  if(X.rows.concat(X.cols).includes('trm')||st.filters.some(f=>f.k==='trm'&&f.sel)||(st.itemSel.trm&&st.itemSel.trm.sel)){
+    const bad=X.segs.filter(s=>s.trmcov!=null&&X.usedY.has(s.y)&&s.trmcov<s.n*0.95).map(s=>yearLabel(s.y)+' ('+Math.round(100*(1-s.trmcov/s.n))+'% sin trámite)');
+    if(bad.length)m.push('El trámite proviene del histórico de títulos por trámite, que no cubre todos los títulos de: '+bad.join(', ')+'; esos registros aparecen como «Sin información».')}
+  return m;
+}
+function notes(){
+  const d=document.createElement('details');d.className='notes';
+  let h='<summary>Fuente, fecha de corte y notas</summary><ul>';
+  RES.segs.forEach(s=>{const inh=Object.entries(s.inh||{}).filter(([k])=>MISS[k]).map(([k,n])=>fmt.format(n)+' '+({sexo:'sexo',jefa:'jefa de hogar',adul:'adulto mayor',orig:'pueblo originario',inm:'tipo de inmueble'})[k]).join(', ');
+    h+=`<li><strong>${yearLabel(s.y)}</strong>: ${esc(s.file)}, hoja «${esc(s.sheet)}», corte ${s.corte}, ${fmt.format(s.n)} expedientes.${s.excl?' Se excluyen '+fmt.format(s.excl)+' registros marcados «EXCLUIR» en el panel.':''}${s.dup?' Incluye '+fmt.format(s.dup)+' filas repetidas de un mismo expediente.':''}${inh?' Completados por cruce de expediente: '+inh+'.':''}${Array.isArray(s.mds)?' Pueblo originario MDS por cruce: '+fmt.format(s.mds[0])+(s.mds[1]?'; '+fmt.format(s.mds[1])+' sin cruce conservan el valor del panel':'')+'.':''}</li>`});
+  h+='</ul><p class="minor">Se cuentan los registros de cada panel tal como fueron informados, incluidas las filas repetidas de un mismo expediente, y se excluyen los marcados «EXCLUIR». Jefa de hogar: definición MBN+MDS. Pueblo originario: columna del panel hasta 2021 y definición MDS desde 2022. Adulto mayor: 60 años o más. Tiempos en meses de 30 días. Las comunas aún no están homologadas con el catálogo oficial. No se incluyen nombres, RUT ni números de expediente.</p>';
+  d.innerHTML=h;return d;
+}
+
+// ---------- descargas ----------
+async function saveFile(filename,blob){
+  try{if(window.claude&&window.claude.use){const dl=await window.claude.use('downloads');if(dl){await dl.save({filename,data:blob});toast('Archivo guardado');return}}}
+  catch(e){if(e&&e.code==='declined')return;toast('No se pudo guardar el archivo');return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+}
+const stamp=s=>('DCPR_'+rep().name+'_'+s+'_'+new Date().toISOString().slice(0,10)).replace(/[\s()]+/g,'_');
+function filtersAoa(){
+  const r=rep();const out=[['Reporte',r.name],['Valores',TABLE.valName],['Filas',RES.rows.map(k=>FL[k].label).join(', ')||'—'],['Columnas',RES.cols.map(k=>FL[k].label).join(', ')||'—']];
+  st.filters.concat(Object.values(st.itemSel).filter(f=>f.sel)).forEach(f=>out.push(['Filtro: '+FL[f.k].label,f.k==='fecha'?filterText(f):(f.sel?[...f.sel].map(v=>labelOf(f.k,v)).join(', '):'(Todos)')]));
+  if(fam()==='SISTRED'&&st.q)out.push(['Búsqueda',st.q]);
+  out.push(['Regla de conteo','Registros del panel tal como fueron informados (incluye filas repetidas); se excluyen los marcados EXCLUIR'],['Generado',new Date().toLocaleString('es-CL')],[],['Año','Archivo','Hoja','Fecha de corte','Expedientes en el panel']);
+  RES.segs.forEach(s=>out.push([yearLabel(s.y),s.file,s.sheet,s.corte,s.n]));return out;
+}
+function needX(){if(typeof XLSX==='undefined'){toast('La librería de Excel no cargó (requiere conexión a internet).');return false}return true}
+function exportTable(){if(!needX())return;const t=TABLE;const r2=(v,jj)=>{if(v==null)return null;const sp=st.vals[t.colVal[jj]];return (NUMF[sp.f]&&NUMF[sp.f].money&&!t.pcts[t.colVal[jj]])?Math.round(v):(Number.isInteger(v)?v:Math.round(v*10)/10)};
+  const aoa=[[currentTitle()],['Valores: '+t.valName+'. Montos en pesos. Fecha de corte: '+RES.segs.map(s=>s.corte).join(', ')]].concat(allNotes().map(x=>['Nota: '+x])).concat([[],t.head,...t.rows.map(r=>r.map((v,j)=>j<t.nlab?v:r2(v,j-t.nlab)))]);if(t.foot)aoa.push(t.foot.map((v,j)=>j<t.nlab?v:r2(v,j-t.nlab)));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),'Tabla');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(filtersAoa()),'Filtros y fuente');
+  saveFile(stamp('tabla')+'.xlsx',new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})]))}
+async function exportDetailSis(){let T;try{T=await loadText()}catch(e){toast('No se pudo cargar el detalle de texto');return}
+  const s=sisSeg(),fd=d=>d?new Date(D0+d*DAY).toISOString().slice(0,10):'',MAXD=300000;
+  const aoa=[[currentTitle()+'. Detalle de casos'],[],['N° de expediente','Región','Comuna','Dirección','Tipo de inmueble','Sexo','Estado','Fecha de ingreso','Fecha de término','Meses (ingreso a término)','Sistema','Trámite','Origen de la posesión','Representante']];
+  for(const i of RES.det.slice(0,MAXD)){const j=i-s.o;aoa.push([T.exp[j],labelOf('reg',D.reg[i]),labelOf('com',D.com[i]),T.dir[j],labelOf('inm',keyOf('inm',i,s)),labelOf('sexo',keyOf('sexo',i,s)),labelOf('est',D.est[i]),fd(D.date2[i]),fd(D.date[i]),D.mes[i]===65535?null:D.mes[i]/10,labelOf('sis',keyOf('sis',i,s)),labelOf('trm',D.trm[i]),labelOf('orp',D.orp[i]),D.rep[i]?T.reps[D.rep[i]-1]:''])}
+  const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:16},{wch:18},{wch:18},{wch:36},{wch:10},{wch:12},{wch:11},{wch:12},{wch:12},{wch:10},{wch:9},{wch:22},{wch:26},{wch:34}];
+  XLSX.utils.book_append_sheet(wb,ws,'Detalle');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(filtersAoa()),'Filtros y fuente');
+  saveFile(stamp('detalle')+'.xlsx',new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})]))}
+function exportDetail(){if(!needX())return;if(fam()==='SISTRED'){exportDetailSis();return}const MAXD=300000;const isT=TABLE.isT;const tp=allowed('tipo');
+  const money=!['TITULOS_ENTREGADOS','TITULOS_POR_ENTREGAR'].includes(fam());const UM=4294967295;
+  const hd=['Año del panel','Fecha ('+(rep().fecha||'')+')','Región','Comuna','Sexo','Jefa de hogar','Adulto mayor','Pueblo originario','Tipo de inmueble','Sistema'].concat(tp?['Tipo de tramitación']:[]).concat(allowed('trm')?['Trámite']:[]).concat(isT?['Meses']:[]).concat(money?['Costo del caso ($)','% de subsidio','Monto a pagar ($)']:[]);
+  const aoa=[[currentTitle()+'. Detalle de registros'],[],hd];const segFor=i=>RES.segs.find(s=>i>=s.o&&i<s.o+s.n);
+  for(const i of RES.det.slice(0,MAXD)){const s=segFor(i),d=D.date[i];const row=[yearLabel(s.y),d?new Date(D0+d*DAY).toISOString().slice(0,10):'',labelOf('reg',D.reg[i]),labelOf('com',D.com[i])];
+    ['sexo','jefa','adul','orig','inm','sis'].concat(tp?['tipo']:[]).concat(allowed('trm')?['trm']:[]).forEach(k=>row.push(labelOf(k,keyOf(k,i,s))));if(isT)row.push(D.mes[i]===65535?null:D.mes[i]/10);if(money)row.push(D.costo[i]===UM?null:D.costo[i],D.subp[i]===255?null:D.subp[i],D.pagar[i]===UM?null:D.pagar[i]);aoa.push(row)}
+  if(RES.det.length>MAXD)aoa.push(['Detalle truncado a '+fmt.format(MAXD)+' de '+fmt.format(RES.det.length)+' registros']);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),'Detalle');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(filtersAoa()),'Filtros y fuente');
+  saveFile(stamp('detalle')+'.xlsx',new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})]))}
+function exportTablePng(){
+  const t=TABLE;if(!t||!t.rows.length){toast('No hay resultado para descargar');return}
+  const MAXR=1500,rows=t.rows.slice(0,MAXR),n=t.nlab,nd=t.head.length-n,firstTot=nd-t.nTot;
+  const FS={s:12,m:14,l:16}[st.tbl.size],S=2,PAD=12,RH=FS+14,FF='"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+  const c0=document.createElement('canvas').getContext('2d');
+  const txt=(v,j,ri)=>(ri===0||j<n)?String(v??''):fmtv(v,t.colVal[j-n]);
+  const all=[t.head].concat(rows).concat(t.foot?[t.foot]:[]);
+  const W=t.head.map((_,j)=>{let m=0;all.forEach((r,ri)=>{c0.font=`${ri===0||ri===all.length-1&&t.foot?600:400} ${FS}px ${FF}`;m=Math.max(m,c0.measureText(txt(r[j],j,ri)).width)});return Math.ceil(m)+PAD*2});
+  const tw=W.reduce((a,b)=>a+b,0);const width=Math.max(tw+40,720);
+  c0.font=`600 ${FS+6}px ${FF}`;const title=[];{let l='';currentTitle().split(' ').forEach(w=>{const s=(l?l+' ':'')+w;if(c0.measureText(s).width>width-40&&l){title.push(l);l=w}else l=s});if(l)title.push(l)}
+  c0.font=`400 ${FS-1}px ${FF}`;const foot=[];const addWrap=s=>{let l='';s.split(' ').forEach(w=>{const q=(l?l+' ':'')+w;if(c0.measureText(q).width>width-40&&l){foot.push(l);l=w}else l=q});if(l)foot.push(l)};
+  allNotes().forEach(addWrap);addWrap('Fuente: DCPR, Ministerio de Bienes Nacionales. Paneles '+SCOPE.map(yearLabel).join(', ')+'.'+(t.rows.length>MAXR?' La imagen muestra las primeras '+MAXR+' filas de '+t.rows.length+'.':''));
+  const TH=title.length*(FS+12)+16,FH=foot.length*(FS+6)+16;const height=20+TH+all.length*RH+FH+20;
+  const cv=document.createElement('canvas');cv.width=Math.ceil(width*S);cv.height=Math.ceil(height*S);const x=cv.getContext('2d');x.scale(S,S);
+  x.fillStyle='#FFFFFF';x.fillRect(0,0,width,height);x.fillStyle='#1E2A2F';x.textBaseline='top';
+  x.font=`600 ${FS+6}px ${FF}`;title.forEach((l,i)=>x.fillText(l,20,20+i*(FS+12)));
+  const X0=20,Y0=20+TH;const max={};rows.forEach(r=>r.slice(n).forEach((v,j)=>{if(j>=firstTot||v==null)return;const vi=t.colVal[j];if(!(max[vi]>=v))max[vi]=v}));
+  all.forEach((r,ri)=>{const y=Y0+ri*RH;const isHead=ri===0,isFoot=t.foot&&ri===all.length-1;let cx=X0;
+    if(isHead||isFoot){x.fillStyle='#EBEFEA';x.fillRect(X0,y,tw,RH)}
+    r.forEach((v,j)=>{const w=W[j];const jj=j-n;const isTot=j>=n&&jj>=firstTot;
+      if(!isHead&&!isFoot&&j>=n){const vi=t.colVal[jj],mx=max[vi];
+        if(isTot){x.fillStyle='#EBEFEA';x.fillRect(cx,y,w,RH)}
+        else if(st.tbl.heat&&v!=null&&mx>0&&!t.pcts[vi]&&v>=0){x.fillStyle=`rgba(185,139,46,${(0.07+0.5*v/mx).toFixed(3)})`;x.fillRect(cx,y,w,RH)}}
+      let s=txt(v,j,ri);if(!isHead&&!isFoot&&j<n-1&&ri>1&&all[ri-1].slice(0,j+1).every((q,k)=>q===r[k]))s='';
+      x.fillStyle='#1E2A2F';x.font=`${isHead||isFoot||isTot||(j<n&&!isHead)?(isHead||isFoot||isTot?600:500):400} ${FS}px ${FF}`;x.textBaseline='middle';
+      if(j<n){x.textAlign='left';x.fillText(s,cx+PAD,y+RH/2)}else{x.textAlign='right';x.fillText(s,cx+w-PAD,y+RH/2)}cx+=w});
+    x.strokeStyle='#D5DCD7';x.lineWidth=1;x.beginPath();x.moveTo(X0,y+RH+.5);x.lineTo(X0+tw,y+RH+.5);x.stroke()});
+  x.strokeRect(X0+.5,Y0+.5,tw,all.length*RH);
+  x.textAlign='left';x.textBaseline='top';x.fillStyle='#5A6A6E';x.font=`400 ${FS-1}px ${FF}`;foot.forEach((l,i)=>x.fillText(l,20,Y0+all.length*RH+14+i*(FS+6)));
+  cv.toBlob(b=>saveFile(stamp('tabla')+'.png',b),'image/png');
+}
+function exportPng(){
+  if(typeof Chart==='undefined'){toast('La librería de gráficos no cargó (requiere conexión a internet).');return}
+  if(!TABLE||!TABLE.rows.length){toast('No hay resultado para graficar');return}
+  const CT=chartTable();const cfg=chartConfig(true,CT);const cv=$('#offchart');const old=Chart.getChart(cv);if(old)old.destroy();
+  const h=st.chart==='barh'?Math.max(700,cfg._n*(cfg._series.length>1?16*cfg._series.length:28)+220):700;cv.width=1400;cv.height=h;cv.style.height=h+'px';const c=new Chart(cv,cfg);
+  cv.toBlob(b=>{c.destroy();saveFile(stamp('grafico')+'.png',b)},'image/png');
+}
+
+// ---------- otro ----------
+function otroPanel(){
+  const p=document.createElement('div');p.className='otro';
+  p.innerHTML=`<h2 style="margin:0;font-size:16px">Requerimiento especial</h2><p class="minor" style="margin:0">Describa qué se necesita y elija el reporte base. La solicitud queda registrada en este navegador y se abre ese reporte para construir la tabla.</p>
+  <label class="minor">Requerimiento<textarea id="ot" rows="3" placeholder="Ej.: títulos entregados a mujeres jefas de hogar de La Araucanía, por comuna, 2022 a 2025"></textarea></label>
+  <label class="minor">Reporte base<select id="ob">${REPORTS.filter(r=>r.id!=='otro').map(r=>`<option value="${r.id}">${r.name}</option>`).join('')}</select></label>
+  <p class="minor" style="margin:0">Al registrar, la herramienta interpreta el texto, arma la tabla con el reporte base y deja la solicitud en el registro.</p>
+  <div><button class="btn" id="og">Registrar y abrir reporte</button></div><div id="ol"></div>`;
+  const Lg=getLog();const ol=p.querySelector('#ol');
+  if(!Lg.length)ol.innerHTML='<p class="minor">Aún no hay requerimientos registrados.</p>';
+  else{ol.innerHTML='<h3 style="font-size:15px;margin:6px 0">Registro</h3><ol>'+Lg.map(x=>`<li>${esc(x.fecha)}, ${esc(x.base)}: ${esc(x.texto)}</li>`).join('')+'</ol>';
+    const b=document.createElement('button');b.className='btn ghost';b.style.marginTop='8px';b.textContent='Descargar registro (Excel)';
+    b.onclick=()=>{if(!needX())return;const ws=XLSX.utils.aoa_to_sheet([['Registro de requerimientos, Gestor de Estadística DCPR'],[],['Fecha','Reporte base','Requerimiento'],...Lg.map(x=>[x.fecha,x.base,x.texto])]);
+      ws['!cols']=[{wch:18},{wch:34},{wch:90}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Registro');saveFile('DCPR_registro_requerimientos.xlsx',new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})]))};ol.appendChild(b)}
+  p.querySelector('#og').onclick=()=>{const t=p.querySelector('#ot').value.trim();if(!t){toast('Escriba el requerimiento antes de registrarlo');return}
+    const id=p.querySelector('#ob').value;const L2=getLog();L2.unshift({fecha:nowStamp(),base:REPORTS.find(r=>r.id===id).name,texto:t});setLog(L2);toast('Requerimiento registrado');
+    $('#nlq').value=t;runNL(t,id,false).then(()=>document.getElementById('result').scrollIntoView({block:'start'}))};
+  return p;
+}
+function getLog(){try{return JSON.parse(localStorage.getItem('dcpr_otros')||'[]')}catch(e){return []}}
+function setLog(L2){try{localStorage.setItem('dcpr_otros',JSON.stringify(L2.slice(0,200)))}catch(e){}}
+
+// ---------- requerimiento en texto libre ----------
+const deacc=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const MESN=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const VALS={sexo:{Mujer:1,Hombre:2,'Persona jurídica':3,'Sin información':0},yn:{'Sí':1,'Si':1,'No':2,'Sin información':0},inm:{Urbano:1,Rural:2,'Sin información':0},sis:{SISTRED:1,MGT:2,Otro:3},tipo:{Positiva:1,Negativa:2,'Enviada a tribunales':3}};
+function codeFor(k,v){
+  if(k==='trm'){const i=META.trms.findIndex(x=>deacc(x)===deacc(String(v)));return i>=0?i+1:null}
+  if(k==='est'){const u=deacc(String(v));return u.startsWith('final')?1:u.includes('proceso')?2:null}
+  if(k==='orp'){const i=META.orps.findIndex(x=>deacc(x)===deacc(String(v)));return i>=0?i+1:null}
+  if(k==='ying'||k==='yter')return parseInt(v)||null;
+  if(k==='anio'||k==='mes')return typeof v==='number'?v:(k==='mes'?MESN.indexOf(deacc(String(v)))+1:parseInt(v));
+  if(k==='reg'){const i=REGS.findIndex(r=>deacc(r)===deacc(String(v))||deacc(r).includes(deacc(String(v)).replace(/^region (de |del )?/,'')));return i>=0?i+1:null}
+  if(k==='com'){const z=x=>deacc(String(x)).replace(/(.)\1/g,'$1').replace(/\s+/g,' ').trim();const i=COMS.findIndex(c=>z(c)===z(v));return i>=0?i+1:null}
+  const map=k==='sexo'?VALS.sexo:k==='inm'?VALS.inm:k==='sis'?VALS.sis:k==='tipo'?VALS.tipo:VALS.yn;
+  const hit=Object.keys(map).find(x=>deacc(x)===deacc(String(v)));return hit!==undefined?map[hit]:null;
+}
+function localParse(q){
+  const s=deacc(q);const o={filters:{},rows:[],cols:[],agg:null,show:'none'};
+  o.rep=/finalizad|terminad|fecha de termino|origen de la posesion|representante|sistred/.test(s)?'sis':/titulo/.test(s)?(/por entregar|pendiente|sin entregar/.test(s)?'tpor':'tent'):/tiempo|demora|meses|duraci/.test(s)?(/cbr|conservador|inscrip/.test(s)?'tcbr':'ttram'):
+    /tramitad|tramitacion/.test(s)?(/tipo|positiv|negativ|tribunal/.test(s)?'ttipo':'tram'):/proceso|cartera|stock|abiert/.test(s)?'proc':/ingres|nuevas|recibid/.test(s)?'ing':null;
+  if(/mediana/.test(s))o.agg='med';else if(/minimo/.test(s))o.agg='min';else if(/maximo/.test(s))o.agg='max';else if(/promedio|media/.test(s))o.agg='avg';
+  o.val=/(porcentaje|%) de subsidio/.test(s)?'subp':/costo/.test(s)?'costo':/a pagar|copago|aporte del solicitante/.test(s)?'pagar':/subsidi/.test(s)&&/monto|\$|pesos|suma|total|promedio/.test(s)?'subs':null;
+  if(o.val&&o.val!=='subp')o.agg=/promedio|media/.test(s)?'avg':'sum';
+  if(!o.val&&/promedio mensual|mensual promedio|promedio por mes|promedio al mes/.test(s)){o.val='exp';o.agg='mavg'}
+  else if(!o.val&&/promedio anual|anual promedio|promedio por ano|promedio al ano/.test(s)){o.val='exp';o.agg='yavg'}
+  const yrs=[...s.matchAll(/\b(20(1[7-9]|2[0-6]))\b/g)].map(m=>+m[1]);
+  const rng=s.match(/(?:entre|desde|de)\s+(20\d\d)\s+(?:y|a|al|hasta)\s+(20\d\d)/)||s.match(/\b(20\d\d)\s*[-–—\/]\s*(20\d\d)\b/);
+  let years=rng?Array.from({length:+rng[2]-+rng[1]+1},(_,i)=>+rng[1]+i):[...new Set(yrs)];
+  let desdeY=false;{const ds=s.match(/(?:desde|a partir de)(?: el)?(?: ano)? (20\d\d)/);if(ds&&!rng){years=[];desdeY=true;for(let y=+ds[1];y<=2026;y++)years.push(y)}}
+  const sem=s.match(/(primer|segundo)\s+semestre\s+(?:de(?:l)?\s+)?(20\d\d)/);
+  const mes=s.match(new RegExp('(?:en|de|durante)\\s+('+MESN.join('|')+')\\s+(?:de(?:l)?\\s+)?(20\\d\\d)'));
+  const MP='('+MESN.join('|')+')';const dRe=new RegExp('(\\d{1,2})\\s+de\\s+'+MP+'\\s+(?:de(?:l)?\\s+)?(20\\d\\d)','g');
+  const p2=v=>String(v).padStart(2,'0');const ds=[...s.matchAll(dRe)].map(m=>`${m[3]}-${p2(MESN.indexOf(m[2])+1)}-${p2(m[1])}`).concat([...s.matchAll(/\b(\d{1,2})[-\/](\d{1,2})[-\/](20\d\d)\b/g)].map(m=>`${m[3]}-${p2(m[2])}-${p2(m[1])}`));
+  if(ds.length>=4){o.periodos=[];for(let i=0;i+1<ds.length;i+=2)o.periodos.push({nombre:(['Primer','Segundo','Tercer','Cuarto','Quinto','Sexto'][i/2]||('Período '+(i/2+1)))+(i/2<6?' período':''),desde:ds[i],hasta:ds[i+1]})}
+  else if(ds.length===2){o.filters.fecha=[ds[0],ds[1]]}
+  else if(/periodo(s)? de gobierno|por gobierno/.test(s)){o.periodos=[{nombre:'Gobierno 2014–2018',desde:'2014-03-11',hasta:'2018-03-10'},{nombre:'Gobierno 2018–2022',desde:'2018-03-11',hasta:'2022-03-10'},{nombre:'Gobierno 2022–2026',desde:'2022-03-11',hasta:'2026-03-10'},{nombre:'Gobierno 2026–2030',desde:'2026-03-11',hasta:'2030-03-10'}]}
+  if(o.periodos||ds.length===2){years=[];}
+  if(sem&&!o.periodos&&!o.filters.fecha){const y=sem[2];o.filters.fecha=sem[1]==='primer'?[y+'-01-01',y+'-06-30']:[y+'-07-01',y+'-12-31']}
+  else if(mes&&!o.periodos&&!o.filters.fecha){const y=+mes[2],m=MESN.indexOf(mes[1])+1;const last=new Date(Date.UTC(y,m,0)).getUTCDate();o.filters.fecha=[`${y}-${String(m).padStart(2,'0')}-01`,`${y}-${String(m).padStart(2,'0')}-${last}`]}
+  const yavgQ=/promedio anual|anual promedio|promedio por ano|promedio al ano/.test(s);
+  if(years.length&&!/por (el |cada )?ano|por anio|cada ano/.test(s)&&!(/\banual\b/.test(s)&&!yavgQ))o.filters.anio=years;
+  if(desdeY&&years.length)o.filters.anio=years;
+  const regHit=REGS.filter(r=>s.includes(deacc(r))||(r==='O’Higgins'&&/higgins/.test(s))||(r==='Biobío'&&/bio ?bio/.test(s))||(r==='Metropolitana'&&/\brm\b|santiago/.test(s)));
+  if(regHit.length)o.filters.reg=regHit;
+  const sq=s.replace(/(.)\1/g,'$1');
+  const comHit=COMS.filter(c=>{const d=deacc(c).replace(/(.)\1/g,'$1');return d.length>3&&new RegExp('\\b'+d.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b').test(sq)&&!REGS.some(r=>deacc(r)===deacc(c))});
+  if(comHit.length&&comHit.length<6)o.filters.com=comHit;
+  if(/\bmujeres?\b/.test(s)&&!/por sexo|hombres y mujeres|mujeres y hombres/.test(s))o.filters.sexo=['Mujer'];else if(/\bhombres?\b/.test(s)&&!/por sexo|hombres y mujeres|mujeres y hombres/.test(s))o.filters.sexo=['Hombre'];
+  const pct=/porcentaje|%|proporcion/.test(s);
+  if(/jefas? de hogar/.test(s)&&!(pct||/por jefa/.test(s)))o.filters.jefa=['Sí'];
+  if(/adultos? mayor/.test(s)&&!(pct||/por adulto/.test(s)))o.filters.adul=['Sí'];
+  if(/indigena|pueblo originario|mapuche|aymara/.test(s)&&!(pct||/por pueblo/.test(s)))o.filters.orig=['Sí'];
+  if(/\brural(es)?\b/.test(s)&&!/urbano/.test(s))o.filters.inm=['Rural'];else if(/\burbanos?\b/.test(s)&&!/rural/.test(s))o.filters.inm=['Urbano'];
+  if(/\bmgt\b/.test(s)&&!/sistred/.test(s))o.filters.sis=['MGT'];
+  const trmHit=[['Título gratuito',/titulo(s)? gratuito/],['Ley del Sur',/ley del sur/],['Acta de radicación',/acta(s)? de radicacion/],['Saneamiento contratista',/contratista/],['Ley N° 20.062',/20\.?062/]].filter(([,re])=>re.test(s)).map(x=>x[0]);
+  if(trmHit.length)o.filters.trm=trmHit;
+  if(o.rep==='sis'){if(/finalizad|terminad/.test(s)&&!/en proceso y finalizad|finalizad(os|as)? y en proceso/.test(s))o.filters.est=['Finalizado'];const bq=q.match(/(?:representante|direcci[oó]n|expediente)\s+[«"']?([^»"',]+?)(?=[»"',]|\s+(?:por|en|entre|desde|seg[uú]n|del a[nñ]o)\b|$)/i);if(bq)o.busqueda=bq[1].trim()}
+  const dimWords=[['est',/estado/],['orp',/origen(?: de la posesion)?/],['yter',/ano de termino/],['ying',/ano de ingreso/],['trm',/tramites?/],['reg',/regi(?:on|ones)/],['com',/comunas?/],['sexo',/sexo|genero/],['anio',/anos?|anio/],['mes',/mes(?:es)?/],
+    ['inm',/inmueble/],['tipo',/tramitacion|tipo/],['sis',/sistema/],['jefa',/jefas? de hogar|jefa/],['adul',/adultos? mayor(?:es)?/],['orig',/pueblo originario|indigena/]];
+  const found=[];dimWords.forEach(([k,re])=>{const m=s.search(new RegExp('\\b(por|segun|separad[oa] por|desagregad[oa] por|y)\\s+(el |la |los |las |cada )?(tipo de )?(?:'+re.source+')\\b'));if(m>=0)found.push([m,k])});
+  [['mes',/mensual/],['anio',yavgQ?/cada ano/:/anual|cada ano/],['sexo',/hombres y mujeres|mujeres y hombres/],['inm',/rural y urbano|urbano y rural/]].forEach(([k,re])=>{const m=s.search(re);if(m>=0&&!found.some(f=>f[1]===k))found.push([m,k])});
+  if(pct){['jefa','adul','orig'].forEach(k=>{if(new RegExp(k==='jefa'?'jefa':k==='adul'?'adulto':'pueblo|indigena').test(s)&&!found.some(f=>f[1]===k))found.push([999,k])})}
+  found.sort((a,b)=>a[0]-b[0]);let dims=[...new Set(found.map(f=>f[1]))];if(o.agg==='mavg'&&!/por mes/.test(s))dims=dims.filter(k=>k!=='mes');if(o.agg==='yavg'&&!/por ano/.test(s))dims=dims.filter(k=>k!=='anio');
+  if(dims.length){o.rows=[dims[0]];o.cols=dims.slice(1,3)}
+  if(o.rep==='ttipo'&&!o.cols.includes('tipo')&&!o.rows.includes('tipo'))o.cols.push('tipo');
+  if(o.periodos&&!o.rows.includes('per')&&!o.cols.includes('per'))o.cols.unshift('per');
+  if(!o.rows.length)o.rows=o.filters.com&&!o.cols.includes('com')?['com']:o.cols.includes('reg')?[]:['reg'];
+  if(years.length>1&&o.agg!=='yavg'&&!o.rows.includes('anio')&&!o.cols.includes('anio')&&o.cols.length<2)o.cols.unshift('anio');
+  if(pct&&o.val!=='subp')o.show=o.cols.length?'row':'tot';
+  return o;
+}
+async function claudeParse(q,sample){
+  const fieldsTxt=FIELDS.map(f=>f.k+' = '+f.label).join('; ');
+  const prompt=`Eres el intérprete de consultas de una herramienta de estadística del Ministerio de Bienes Nacionales de Chile (regularización de la pequeña propiedad raíz, D.L. 2.695). Convierte el requerimiento del usuario en la configuración de una tabla dinámica.
+
+Reportes (campo "rep"; si el usuario habla de casos finalizados, terminados, fecha de término, origen de la posesión, representante o dirección, usa "sis" y filtra est=Finalizado cuando pida finalizados; un año en ese contexto es año de término, campo yter): ${REPORTS.filter(r=>r.id!=='otro').map(r=>r.id+' = '+r.name+': '+(r.desc||'')).join(' | ')}.
+Campos (claves): ${fieldsTxt}. En el reporte "sis" (casos SISTRED de saneamiento en proceso y finalizados, más casos MGT finalizados de todos los trámites; "sis" = SISTRED o MGT y "trm" = trámite): "fecha" filtra por fecha de término, "fing" por fecha de ingreso (["AAAA-MM-DD","AAAA-MM-DD"]); "est": Finalizado, En proceso, Sin fecha de término; "orp" (origen de la posesión): Herencia, Compraventa, Simple posesión material, Cesión de derechos, Donación, Subdivisión de hecho, Municipio, Ocupación propietario SERVIU, Permuta, Otro; "repp": Sí, No; "ying" y "yter": años de ingreso y término (2013 a 2026). Si el usuario pide buscar un nombre de representante, una dirección o un expediente, ponlo en "busqueda" (texto) y usa rep="sis". "trm" (Trámite, solo en tent) toma: Saneamiento, Saneamiento contratista, Título gratuito, Acta de radicación, Ley del Sur, Ley N° 20.062. "per" (Período) agrupa por rangos de fechas definidos en "periodos": [{"nombre":"...","desde":"AAAA-MM-DD","hasta":"AAAA-MM-DD"}]; úsalo cuando el usuario pida comparar dos o más rangos de fechas o «por periodo de gobierno» (períodos de gobierno: 2014-03-11 a 2018-03-10, 2018-03-11 a 2022-03-10, 2022-03-11 a 2026-03-10, 2026-03-11 a 2030-03-10), y pon "per" en cols (o en rows si ya hay otra dimensión en cols). "fecha" solo puede ir en filtros, como ["AAAA-MM-DD","AAAA-MM-DD"]. "tipo" solo existe en ttipo, tram y ttram.
+Valores permitidos: anio: 2017 a 2026 (2026 es corte a octubre); mes: 1 a 12; reg: ${REGS.join(', ')}; sexo: Mujer, Hombre, Persona jurídica; jefa, adul, orig: Sí, No; inm: Urbano, Rural; sis: SISTRED, MGT; tipo: Positiva, Negativa, Enviada a tribunales; com: nombre de comuna chilena.
+val (campo de valores): exp (expedientes), meses (solo ttram y tcbr), costo (costo del caso en pesos), subs (monto subsidiado en pesos), pagar (monto a pagar por el solicitante en pesos), subp (porcentaje de subsidio); los montos no existen en tent ni tpor. agg según val: exp: count (conteo), yavg (promedio anual de expedientes), mavg (promedio mensual de expedientes; no en tpor ni proc); meses: avg, med, min, max, n; costo, subs, pagar: sum, avg; subp: avg. show: none, tot (% del total), row (% de la fila), col (% de la columna); solo para count y sum.
+Reglas: "por X" o "según X" va en filas o columnas; la primera dimensión en "rows" y las siguientes en "cols". Si el usuario pide una proporción (por ejemplo "porcentaje de jefas de hogar"), pon esa dimensión en cols y show=row. Si pide varios años sin "por año", pon "anio" en cols. Si no menciona dimensiones, usa rows=["reg"]. Si no menciona año, no filtres año. Un rango como «2022-2025» o «entre 2022 y 2025» se filtra con todos los años intermedios. Si el usuario filtra por una o más comunas, pon "com" en rows (no "reg"); si filtra por una sola región sin pedir otra apertura, usa rows=["com"]. Corrige errores de ortografía en nombres de comunas y regiones (por ejemplo «villarica» es «Villarrica»). Si el requerimiento no corresponde a ningún reporte, usa rep=null y explica por qué en "nota".
+
+Responde SOLO con un objeto JSON, sin texto adicional:
+{"rep":"...","filters":{"anio":[2025],"reg":["La Araucanía"]},"rows":["reg"],"cols":[],"periodos":[],"busqueda":"","val":"exp","agg":"count","show":"none","nota":"una frase breve en español sobre cómo se interpretó o qué no se pudo representar"}
+
+Requerimiento del usuario: ${JSON.stringify(q)}`;
+  return await sample.json(prompt,{modelTier:'quick'});
+}
+function normalizeSpec(o){
+  if(o.rep==='sis'){const sw=x=>x==='anio'?(/ingres/.test(deacc(o._q||''))&&!/termin/.test(deacc(o._q||''))?'ying':'yter'):x;if(o.filters&&o.filters.anio){o.filters[sw('anio')]=o.filters.anio;delete o.filters.anio}o.rows=(o.rows||[]).map(sw);o.cols=(o.cols||[]).map(sw)}
+  const periods=(Array.isArray(o.periodos)?o.periodos:[]).map((p,i)=>({name:String(p.nombre||p.name||('Período '+(i+1))),from:String(p.desde||p.from||''),to:String(p.hasta||p.to||'')})).filter(p=>/^\d{4}-\d{2}-\d{2}$/.test(p.from)||/^\d{4}-\d{2}-\d{2}$/.test(p.to));
+  if(!periods.length&&!st.periods.length){o.rows=(o.rows||[]).filter(k=>k!=='per');o.cols=(o.cols||[]).filter(k=>k!=='per')}
+  const out={busqueda:(typeof o.busqueda==='string'&&o.busqueda.trim())?o.busqueda.trim():'',periods:periods.length?periods:null,rep:REPORTS.some(r=>r.id===o.rep&&r.id!=='otro')?o.rep:null,filters:[],rows:[],cols:[],agg:o.agg,show:['none','tot','row','col'].includes(o.show)?o.show:'none',nota:o.nota||'',bad:[]};
+  if(!out.rep)return out;
+  const r=REPORTS.find(x=>x.id===out.rep);const ok=k=>allowedFor(k,r.fam);
+  for(const [k,v] of Object.entries(o.filters||{})){if(!ok(k)||!v)continue;
+    if(k==='fecha'||k==='fing'){if(Array.isArray(v)&&v.length===2)out.filters.push({k,sel:null,from:String(v[0]||''),to:String(v[1]||'')});continue}
+    const codes=[...new Set((Array.isArray(v)?v:[v]).map(x=>codeFor(k,x)).filter(x=>x!=null&&!Number.isNaN(x)))];
+    const missed=(Array.isArray(v)?v:[v]).filter(x=>codeFor(k,x)==null);if(missed.length)out.bad.push(FL[k].label+': '+missed.join(', '));
+    if(codes.length)out.filters.push({k,sel:new Set(codes),from:'',to:''})}
+  {const fk=new Set(Object.keys(o.filters||{}).filter(k=>o.filters[k]&&(!Array.isArray(o.filters[k])||o.filters[k].length)));const rr=(o.rows||[]).slice(),cc=o.cols||[];
+   if(fk.has('com')&&!rr.includes('com')&&!cc.includes('com')){const i=rr.indexOf('reg');if(i>=0)rr[i]='com';else if(!rr.length)rr.push('com');else rr.unshift('com')}
+   else if(fk.has('reg')&&!fk.has('com')&&rr.length===1&&rr[0]==='reg'&&(Array.isArray(o.filters.reg)?o.filters.reg.length===1:true))rr[0]='com';
+   o.rows=rr}
+  const used=new Set();out.itemSel={};
+  out.rows=(o.rows||[]).filter(k=>ok(k)&&!FL[k].filterOnly&&!used.has(k));out.rows.forEach(k=>used.add(k));
+  out.cols=(o.cols||[]).filter(k=>ok(k)&&!FL[k].filterOnly&&!used.has(k));out.cols.forEach(k=>used.add(k));
+  out.filters=out.filters.filter(f=>{if(used.has(f.k)){if(f.sel)out.itemSel[f.k]={k:f.k,sel:f.sel};return false}return true});
+  if(!out.rows.length&&!out.cols.length)out.rows=['reg'];
+  let vf=NUMF[o.val]?o.val:(r.tiempo?'meses':'exp');if(!numAllowedFor(vf,r))vf='exp';
+  const ag=aggsOfFor(vf,r);let a0=o.agg==='n'?'count':o.agg;if(!ag.includes(a0))a0=vf==='meses'?'avg':NUMF[vf].money?'sum':ag[0];out.vals=[{f:vf,agg:a0,show:['count','sum'].includes(a0)?out.show:'none'}];
+  return out;
+}
+function describeSpec(sp){
+  const r=REPORTS.find(x=>x.id===sp.rep);const fl=sp.filters.map(f=>`<span>${esc(FL[f.k].label)}: ${esc(filterText(f))}</span>`).join('')||'—';
+  const lab=a=>a.length?a.map(k=>`<span>${esc(FL[k].label)}${sp.itemSel&&sp.itemSel[k]?': '+esc(filterText(sp.itemSel[k])):''}</span>`).join(''):'—';
+  const v0=sp.vals[0];const val=vLabel(v0.f)+': '+AGGL[v0.agg]+({tot:', % del total',row:', % de la fila',col:', % de la columna'}[v0.show]||'');
+  return `<p><strong>Reporte:</strong> ${esc(r.name)}</p>${sp.periods?'<p class="minor">Períodos: '+sp.periods.map(p=>esc(p.name)+' ('+esc(p.from||'…')+' a '+esc(p.to||'…')+')').join('; ')+'</p>':''}<div class="mini"><div><b>Filtros</b>${fl}</div><div><b>Columnas</b>${lab(sp.cols)}</div><div><b>Filas</b>${lab(sp.rows)}</div><div><b>Valores</b><span>${esc(val)}</span></div></div>`;
+}
+let sampleFn=null;
+if(window.claude&&window.claude.use)window.claude.use('sample').then(f=>{sampleFn=f}).catch(()=>{});
+function initNL(){
+  const go=$('#nlgo'),qa=$('#nlq'),stt=$('#nlstate'),out=$('#nlout');
+  qa.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))go.click()});
+  go.onclick=()=>{const q=qa.value.trim();if(!q){toast('Escriba el requerimiento');qa.focus();return}runNL(q,null,true)};
+}
+function nowStamp(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`}
+async function runNL(q,forceRep,log){
+    const go=$('#nlgo'),stt=$('#nlstate'),out=$('#nlout');
+    go.disabled=true;stt.textContent=sampleFn?'Interpretando con Claude…':'Interpretando…';out.innerHTML='';
+    let raw=null,via='reglas';
+    if(sampleFn){try{raw=await claudeParse(q,sampleFn);via='claude'}catch(e){raw=null}}
+    if(!raw||!raw.rep){const lp=localParse(q);if(lp.rep||!raw){raw=lp;via='reglas'}}
+    if(forceRep)raw.rep=forceRep;
+    if(raw)raw._q=q;
+    let sp=normalizeSpec(raw);go.disabled=false;stt.textContent='';
+    if(!sp.rep){const lp=localParse(q);lp._q=q;if(forceRep)lp.rep=forceRep;const sp2=normalizeSpec(lp);if(sp2.rep){sp=sp2;via='reglas'}}
+    const box=document.createElement('div');box.className='nlres';
+    if(!sp.rep){box.innerHTML=`<p>No pude asociar el requerimiento a uno de los reportes disponibles (títulos entregados o por entregar, solicitudes tramitadas, en proceso, nuevas solicitudes ingresadas, tiempos promedio o casos SISTRED finalizados y en proceso).${sp.nota?' '+esc(sp.nota):''} Puede reformularlo o armar la tabla directamente en la tabla dinámica.</p>`;out.appendChild(box);return}
+    st.rep=sp.rep;$('#rep').value=sp.rep;defaults();st.filters=sp.filters;st.rows=sp.rows;st.cols=sp.cols;st.itemSel=sp.itemSel||{};if(sp.periods)st.periods=sp.periods;if(sp.busqueda)setTimeout(()=>runSearch(sp.busqueda),0);st.vals=sp.vals;st.chartVal=0;st.view='tabla';renderAll();
+    box.innerHTML=`<p>Así lo interpreté (puede ajustar los campos en la tabla dinámica):</p>${describeSpec(sp)}${sp.nota&&via==='claude'?'<p class="minor">'+esc(sp.nota)+'</p>':''}${sp.bad.length?'<p class="minor">No reconocí: '+esc(sp.bad.join('; '))+'.</p>':''}${via==='reglas'?'<p class="minor">Interpretación por palabras clave; revise que la tabla corresponda a lo pedido.</p>':''}`;
+    out.appendChild(box);
+}
+const QUICK=['tent','tpor','tram','ttipo','proc','ing'];
+function renderQuick(){const q=$('#quick');q.innerHTML='<h3>Reportes más usados</h3>';
+  QUICK.forEach(id=>{const r=REPORTS.find(x=>x.id===id);const b=document.createElement('button');b.className='chip';b.textContent=id==='otro'?'Otro':r.name;b.setAttribute('aria-pressed',st.rep===id);
+    b.onclick=()=>{st.rep=id;$('#rep').value=id;if(id!=='otro')defaults();renderAll()};q.appendChild(b)})}
+// ---------- reportes guardados ----------
+let DB=null,USER=null,SAVED=[],ME=null,NAMES_={},svQ='';
+function cfgSnapshot(){return {rep:st.rep,filters:st.filters.map(f=>({k:f.k,sel:f.sel?[...f.sel]:null,from:f.from||'',to:f.to||''})),rows:[...st.rows],cols:[...st.cols],
+  itemSel:Object.values(st.itemSel).filter(f=>f.sel&&(st.rows.includes(f.k)||st.cols.includes(f.k))).map(f=>({k:f.k,sel:[...f.sel]})),vals:st.vals.map(v=>({f:v.f,agg:v.agg,show:v.show})),
+  periods:st.periods.map(p=>({name:p.name,from:p.from,to:p.to})),chart:st.chart,chartAxis:st.chartAxis,chartSeries:st.chartSeries,chartVal:st.chartVal,colors:{...st.colors},
+  tbl:{...st.tbl},copt:{...st.copt},title:st.title,note:st.note,view:st.view}}
+function applyCfg(c,autoYears){
+  st.rep=c.rep;$('#rep').value=c.rep;defaults();
+  const yrs=segsOf(fam()).map(s=>s.y);const fixY=o=>{if(o.k==='anio'&&o.sel&&autoYears){const mn=Math.min(...o.sel);return yrs.filter(y=>y>=mn)}return o.sel};
+  st.filters=(c.filters||[]).map(f=>({k:f.k,sel:f.sel?new Set(fixY(f)):null,from:f.from||'',to:f.to||''}));
+  st.rows=[...(c.rows||[])];st.cols=[...(c.cols||[])];st.itemSel={};(c.itemSel||[]).forEach(f=>st.itemSel[f.k]={k:f.k,sel:new Set(fixY(f))});
+  st.vals=(c.vals&&c.vals.length?c.vals:st.vals).map(v=>({...v}));st.periods=(c.periods||[]).map(p=>({...p}));
+  st.chart=c.chart||'col';st.chartAxis=c.chartAxis??null;st.chartSeries=c.chartSeries??null;st.chartVal=c.chartVal||0;st.colors={...(c.colors||{})};
+  st.tbl={...st.tbl,...(c.tbl||{})};st.copt={...st.copt,...(c.copt||{})};st.title=c.title||'';st.note=c.note||'';st.view=c.view||'tabla';st.opt=null;renderAll();
+  document.getElementById('result').scrollIntoView({block:'start'})}
+function localSaved(){try{return JSON.parse(localStorage.getItem('dcpr_guardados')||'[]')}catch(e){return []}}
+function setLocalSaved(L){try{localStorage.setItem('dcpr_guardados',JSON.stringify(L))}catch(e){}}
+async function initSaved(){
+  $('#svbtn').onclick=e=>openSaveDialog(e.currentTarget);
+  try{if(window.claude&&window.claude.use){DB=await window.claude.use('db');USER=await window.claude.use('user')}}catch(e){DB=null}
+  if(USER){try{ME=await USER.id()}catch(e){}}
+  if(DB){let timer=setTimeout(()=>{$('#svlist').innerHTML='<p class="minor">No se pudo conectar con el registro compartido todavía; se reintentará automáticamente.</p>'},10000);
+    DB.collection('reportes').orderBy('actualizado','desc').limit(300).onSnapshot(async snap=>{clearTimeout(timer);SAVED=snap.docs.map(d=>({id:d.id,...d.data()}));
+      const ids=[...new Set(SAVED.map(s=>s.autor).filter(Boolean))];if(USER&&ids.length){try{const P=await USER.profiles(ids);ids.forEach(i=>NAMES_[i]=(P[i]&&P[i].name)||'')}catch(e){}}renderSaved()},
+      err=>{clearTimeout(timer);DB=null;SAVED=localSaved();$('#svhint').textContent+=' (El registro compartido no está disponible; se guardan en este navegador.)';renderSaved()})}
+  else{SAVED=localSaved();renderSaved()}
+}
+function newYears(s){const r=REPORTS.find(x=>x.id===s.cfg.rep);if(!r||!r.fam)return [];const cur=segsOf(r.fam).map(x=>x.y);return cur.filter(y=>!(s.anios||[]).includes(y))}
+function renderSaved(){
+  const L=$('#svlist');L.innerHTML='';
+  if(!SAVED.length){L.innerHTML='<p class="minor">Aún no hay reportes guardados.</p>';return}
+  if(SAVED.length>5){const q=document.createElement('input');q.type='search';q.className='svsearch';q.placeholder='Buscar en reportes guardados';q.setAttribute('aria-label','Buscar en reportes guardados');q.value=svQ;q.oninput=()=>{svQ=q.value;draw()};L.appendChild(q)}
+  const box=document.createElement('div');L.appendChild(box);
+  const draw=()=>{box.innerHTML='';const qq=deacc(svQ||'');
+    SAVED.filter(s=>!qq||deacc((s.nombre||'')+' '+(s.texto||'')).includes(qq)).forEach(s=>{
+      const r=REPORTS.find(x=>x.id===s.cfg.rep);const nu=newYears(s);const it=document.createElement('div');it.className='svitem';
+      const nm=document.createElement('div');nm.className='nm';nm.textContent=s.nombre||'Sin nombre';it.appendChild(nm);
+      const mt=document.createElement('div');mt.className='mt';const who=s.autor?(NAMES_[s.autor]||''):'';
+      mt.textContent=(r?r.name:'')+' · guardado '+(s.actualizadoTxt||'')+(who?' por '+who:'')+(s.autoAnios?' · incluye años nuevos':'');it.appendChild(mt);
+      if(s.texto){const tx=document.createElement('div');tx.className='tx';tx.textContent='«'+s.texto+'»';it.appendChild(tx)}
+      if(nu.length){const b=document.createElement('span');b.className='badge';b.textContent='Datos nuevos desde que se guardó: '+nu.map(yearLabel).join(', ');it.appendChild(b)}
+      const ac=document.createElement('div');ac.className='ac';
+      const mk=(l,f,cls)=>{const b=document.createElement('button');b.className=cls||'linkbtn';b.textContent=l;b.onclick=f;ac.appendChild(b);return b};
+      mk('Abrir',()=>{applyCfg(s.cfg,s.autoAnios);toast('Reporte abierto: '+(s.nombre||''))},'btn ghost');
+      const ask=(q,yes,fn)=>{ac.innerHTML='';const p=document.createElement('span');p.className='mt';p.textContent=q;ac.appendChild(p);
+        const y=document.createElement('button');y.className='btn';y.style.padding='3px 10px';y.textContent=yes;y.onclick=async()=>{y.disabled=true;await fn()};
+        const n=document.createElement('button');n.className='btn ghost';n.style.padding='3px 10px';n.textContent='Cancelar';n.onclick=()=>renderSaved();ac.append(y,n);y.focus()};
+      mk('Reemplazar con la tabla actual',()=>{if(st.rep==='otro'){toast('Abra un reporte antes de reemplazar');return}
+        ask('¿Reemplazar «'+(s.nombre||'')+'» con la tabla actual?','Sí, reemplazar',async()=>{await saveReport({...s,cfg:cfgSnapshot()},s.id);renderSaved()})});
+      mk('Eliminar',()=>ask('¿Eliminar «'+(s.nombre||'')+'» del registro?','Sí, eliminar',async()=>{
+        if(DB){try{await DB.collection('reportes').doc(s.id).delete();SAVED=SAVED.filter(x=>x.id!==s.id);renderSaved();toast('Reporte eliminado')}catch(e){toast('No se pudo eliminar'+(e&&e.code==='permission_denied'?': su nivel de acceso es de solo lectura':''));renderSaved()}}
+        else{setLocalSaved(localSaved().filter(x=>x.id!==s.id));SAVED=localSaved();renderSaved();toast('Reporte eliminado')}}));
+      it.appendChild(ac);box.appendChild(it)})};
+  draw();
+}
+function openSaveDialog(anchor){
+  if(st.rep==='otro'){toast('Abra un reporte antes de guardarlo');return}
+  closePop();const p=document.createElement('div');p.className='pop';p.style.width='min(400px,92vw)';p.setAttribute('role','dialog');p.setAttribute('aria-label','Guardar reporte');
+  const ys=(st.filters.find(f=>f.k==='anio'&&f.sel)||st.itemSel.anio||{}).sel;const hasY=!!ys;const latest=Math.max(...segsOf(fam()).map(s=>s.y));const defOn=!hasY||Math.max(...ys)===latest;
+  p.innerHTML=`<h4>Guardar reporte</h4><label class="minor" style="flex-direction:column;align-items:stretch;padding:0">Nombre<input type="search" id="svn"></label>
+    <label style="padding:0;font-size:13px"><input type="checkbox" id="sva"${defOn?' checked':''}> Incluir automáticamente los años que se agreguen${hasY?' (desde el primer año seleccionado)':''}</label>
+    <div class="row"><button class="btn ghost" id="svc">Cancelar</button><button class="btn" id="svo">Guardar</button></div>`;
+  positionAt(p,anchor);const n=p.querySelector('#svn');n.value=currentTitle();n.select();
+  p.querySelector('#svc').onclick=closePop;
+  p.querySelector('#svo').onclick=async()=>{const nombre=n.value.trim();if(!nombre){toast('Escriba un nombre');return}
+    closePop();await saveReport({nombre,texto:($('#nlq').value||'').trim(),autoAnios:p.querySelector('#sva').checked,cfg:cfgSnapshot()})};
+}
+async function saveReport(s,id){
+  const now=new Date(),p2=n=>String(n).padStart(2,'0');const txt=`${p2(now.getDate())}-${p2(now.getMonth()+1)}-${now.getFullYear()} ${p2(now.getHours())}:${p2(now.getMinutes())}`;
+  const doc={nombre:s.nombre,texto:s.texto||'',autoAnios:!!s.autoAnios,cfg:s.cfg,anios:segsOf(REPORTS.find(r=>r.id===s.cfg.rep).fam).map(x=>x.y),actualizado:now.getTime(),actualizadoTxt:txt,autor:ME||s.autor||null};
+  if(DB){try{await (id?DB.collection('reportes').doc(id).set(doc):DB.collection('reportes').add(doc));toast(id?'Reporte actualizado':'Reporte guardado')}catch(e){toast('No se pudo guardar: '+(e&&e.code==='permission_denied'?'su nivel de acceso es de solo lectura':'error del registro'))}}
+  else{const L=localSaved();const d={...doc,id:id||('l'+now.getTime())};const i=L.findIndex(x=>x.id===d.id);i>=0?L.splice(i,1,d):L.unshift(d);L.sort((a,b)=>b.actualizado-a.actualizado);setLocalSaved(L);SAVED=L;renderSaved();toast(id?'Reporte actualizado':'Reporte guardado en este navegador')}
+}
+// ---------- búsqueda SISTRED ----------
+const TEXT_URL=(window.claude&&window.claude.use)?'/_blob/9b699a26d26d202d5595f472fe8c0b84':'datos/sistred_texto.json';let STXT=null,SMASK=null,STXT_P=null;
+function loadText(){if(STXT)return Promise.resolve(STXT);if(STXT_P)return STXT_P;
+  if(TEXT_URL.startsWith('__'))return Promise.reject(new Error('sin archivo'));
+  STXT_P=fetch(TEXT_URL).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(j=>{STXT=j;return j}).catch(e=>{STXT_P=null;throw e});return STXT_P}
+function sisSeg(){return SEGS.find(s=>s.f==='SISTRED')}
+async function runSearch(q){
+  q=(q||'').trim();st.q=q;if(!q){SMASK=null;renderAll();return}
+  const stt=$('#sstate');if(stt)stt.textContent='Buscando…';
+  let T;try{T=await loadText()}catch(e){if(stt)stt.textContent=(window.claude&&window.claude.use)?'No se pudo cargar el índice de búsqueda ('+e.message+').':'La búsqueda por representante, dirección o expediente no está incluida en esta versión, porque contiene datos personales. Úsela en la versión del gestor en Claude.';return}
+  const s=sisSeg(),qq=deacc(q);const repM=T.reps.map(n=>deacc(n).includes(qq));const m=new Uint8Array(s.n);let n=0;
+  for(let j=0;j<s.n;j++){const ri=D.rep[s.o+j];if((ri&&repM[ri-1])||deacc(T.dir[j]).includes(qq)||deacc(T.exp[j]).includes(qq)){m[j]=1;n++}}
+  SMASK=m;st.qn=n;renderAll()}
+function searchBar(){
+  const w=document.createElement('div');w.className='searchbar';
+  w.innerHTML=`<label for="sq" class="minor" style="font-weight:600">Buscar por representante, dirección o N° de expediente</label><div class="sqrow"><input type="search" id="sq" placeholder="Ej.: GRANT TIGHE, LOS ALERCES o 11-SA-014957"><button class="btn" id="sgo">Buscar</button>${st.q?'<button class="btn ghost" id="sclr">Limpiar búsqueda</button>':''}</div><p class="minor" id="sstate"></p>`;
+  const i=w.querySelector('#sq');i.value=st.q||'';i.onkeydown=e=>{if(e.key==='Enter')runSearch(i.value)};w.querySelector('#sgo').onclick=()=>runSearch(i.value);
+  const c=w.querySelector('#sclr');if(c)c.onclick=()=>runSearch('');
+  if(st.q)w.querySelector('#sstate').textContent=fmt.format(st.qn||0)+' casos coinciden con «'+st.q+'» (antes de aplicar los demás filtros).';
+  return w}
+function casesList(){
+  const w=document.createElement('details');w.className='notes';w.open=true;const s=sisSeg();
+  const ids=RES.det.slice(0,200);w.innerHTML=`<summary>Casos encontrados (${fmt.format(RES.det.length)}${RES.det.length>200?', se muestran los primeros 200; el detalle completo se descarga en Excel':''})</summary><div class="tablebox" style="max-height:420px;margin-top:8px"><p class="status">Cargando…</p></div>`;
+  loadText().then(T=>{const fd=d=>d?new Date(D0+d*DAY).toISOString().slice(0,10):'';
+    let h='<table><thead><tr><th class="l">N° de expediente</th><th class="l">Región</th><th class="l">Comuna</th><th class="l">Dirección</th><th class="l">Estado</th><th>Ingreso</th><th>Término</th><th class="l">Sistema</th><th class="l">Trámite</th><th class="l">Origen de la posesión</th><th class="l">Representante</th></tr></thead><tbody>';
+    ids.forEach(i=>{const j=i-s.o;h+=`<tr><td class="l">${esc(T.exp[j])}</td><td class="l">${esc(labelOf('reg',D.reg[i]))}</td><td class="l">${esc(labelOf('com',D.com[i]))}</td><td class="l">${esc(T.dir[j])}</td><td class="l">${esc(labelOf('est',D.est[i]))}</td><td>${fd(D.date2[i])}</td><td>${fd(D.date[i])}</td><td class="l">${esc(labelOf('sis',keyOf('sis',i,s)))}</td><td class="l">${esc(labelOf('trm',D.trm[i]))}</td><td class="l">${esc(labelOf('orp',D.orp[i]))}</td><td class="l">${esc(D.rep[i]?T.reps[D.rep[i]-1]:'')}</td></tr>`});
+    w.querySelector('.tablebox').innerHTML=h+'</tbody></table>'}).catch(e=>{w.querySelector('.tablebox').innerHTML='<p class="status">No se pudo cargar el detalle ('+esc(e.message)+').</p>'});
+  return w}
+function renderAll(){closePop();renderQuick();if(st.rep!=='otro'){['rows','cols'].forEach(z=>st[z]=st[z].filter(allowed));st.filters=st.filters.filter(f=>allowed(f.k))}renderPalette();renderZones();renderResult()}
+load().then(()=>{initReport();defaults();initNL();renderAll();initSaved()}).catch(e=>{$('#result').innerHTML='<p class="status">No se pudieron cargar los datos: '+esc(e.message)+'</p>'});
+})();
+</script>
+</body>
+</html>

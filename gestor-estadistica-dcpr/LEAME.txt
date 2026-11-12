@@ -1,0 +1,9 @@
+Gestor de Estadística DCPR — versión para GitHub Pages
+
+Contenido:
+- index.html: la página (liviana).
+- datos/datos.bin: datos agregados de los paneles 2018–2026 y del universo SISTRED (comprimidos).
+
+Suba ambos manteniendo la carpeta «datos» junto a index.html.
+Esta versión no incluye nombres de representantes, direcciones ni números de expediente.
+Sin Claude, el cuadro de texto libre usa el intérprete por palabras clave y los reportes guardados quedan en el navegador de cada persona.
